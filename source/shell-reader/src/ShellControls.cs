@@ -8,12 +8,12 @@ public class ShellControls : IShellControls
 
     public ShellControls(IShellReader reader)
     {
-        histIndex = 0;
-
         Reader = reader;
         
         History = [];        
     
+        histIndex = 0;
+
     }
 
     #region Properties
@@ -26,7 +26,15 @@ public class ShellControls : IShellControls
     #region Methods
     public string Enter(string input)
     {
+        if (!string.IsNullOrWhiteSpace(input))
+        {
+            History.Add(input);
+
+        }
+
         Reader.IsReading = false;
+
+        histIndex = History.Count - 1;
         
         return input;
 

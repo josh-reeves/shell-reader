@@ -7,7 +7,7 @@ public interface IShellReader
 
     public string Prompt { get; set; }
 
-    public ITextCursor Cursor { get; }
+    public IConsole Terminal { get; set; }
 
     public IDictionary<ConsoleKeyInfo, Func<string, string>> KeyMap { get; }
     

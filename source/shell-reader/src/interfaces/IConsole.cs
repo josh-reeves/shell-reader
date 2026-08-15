@@ -10,9 +10,9 @@ public interface IConsole
     #region Methods
     public ConsoleKeyInfo ReadKey(bool intercept);
 
-    public void Write(string value);
+    public void Write(object? value = null);
 
-    public void WriteLine(string value);
+    public void WriteLine(object? value = null);
 
     #endregion
     

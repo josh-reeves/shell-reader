@@ -4,9 +4,14 @@ namespace ShellReader;
 
 public class ShellReader : IShellReader, IDebuggable
 {
+    #region Fields
     private string input;
 
-    public ShellReader(string prompt = "", IDictionary<ConsoleKeyInfo, Func<string, string>>? keyMap = null)
+    private ITextCursor cursor => Terminal.Cursor;
+
+    #endregion
+
+    public ShellReader(string prompt = "", IConsole? terminal = null, IDictionary<ConsoleKeyInfo, Func<string, string>>? keyMap = null)
     {
         input = string.Empty;
 
@@ -14,8 +19,8 @@ public class ShellReader : IShellReader, IDebuggable
         
         KeyMap = keyMap ?? new Dictionary<ConsoleKeyInfo, Func<string, string>>();
 
-        Cursor = new TextCursor();
-        
+        Terminal = terminal ??= new Terminal();
+
     }
 
     #region Events
@@ -28,7 +33,7 @@ public class ShellReader : IShellReader, IDebuggable
 
     public string Prompt { get; set; }
 
-    public ITextCursor Cursor { get; }
+    public IConsole Terminal { get; set; }
 
     public IDictionary<ConsoleKeyInfo, Func<string, string>> KeyMap { get; }
 
@@ -81,13 +86,13 @@ public class ShellReader : IShellReader, IDebuggable
 
         prompt ??= Prompt;
         
-        Console.Write(prompt);
+        Terminal.Write(prompt);
 
         IsReading = true;
 
         while (IsReading)
         {
-            ConsoleKeyInfo keyInfo = Console.ReadKey(intercept: true);
+            ConsoleKeyInfo keyInfo = Terminal.ReadKey(intercept: true);
 
             BroadcastInput(keyInfo);
 
@@ -109,7 +114,7 @@ public class ShellReader : IShellReader, IDebuggable
 
                 input += keyInfo.KeyChar;
                 
-                Console.Write(keyInfo.KeyChar);
+                Terminal.Write(keyInfo.KeyChar);
 
             }
 
@@ -117,7 +122,7 @@ public class ShellReader : IShellReader, IDebuggable
 
         Debugger?.WriteLine($"Exiting input loop.", ["INPUT"]);
 
-        Console.WriteLine();
+        Terminal.WriteLine();
 
         return input;
 
@@ -125,45 +130,74 @@ public class ShellReader : IShellReader, IDebuggable
 
     public void ClearLine(int startPos = 0)
     {
-        Cursor.SetColumn(1 + startPos);
+        cursor.SetColumn(1 + startPos);
 
-        Cursor.ClearRemaining();
+        cursor.ClearRemaining();
 
     }
 
     public void Insert(string insert, int startPos = 0)
     {
-        Cursor.SetColumn(1 + startPos);
+        cursor.SetColumn(1 + startPos);
 
-        Console.Write(insert);
+        Terminal.Write(insert);
 
     }
 
     #endregion
 
     #region Structs
+
+
+    #endregion
+
+}
+
+public class Terminal : IConsole
+{
+    public Terminal()
+    {
+        Cursor = new TextCursor();
+    
+    }
+
+    public ITextCursor Cursor { get; }
+
+    public ConsoleKeyInfo ReadKey(bool intercept = false) => Console.ReadKey(intercept);
+
+    public void Write(object? value = null) => Console.Write(value);
+
+    public void WriteLine(object? value = null) => Console.WriteLine(value);
+
     private struct TextCursor : ITextCursor
     {
         private const char Escape = '\u001B';
+
         private string escapePrefix => $"{Escape}[";
 
-        public TextCursor() {}
+        private IConsole terminal;
 
-        public void MoveUp(int count = 1) => Console.Write($"{escapePrefix}{count}A");
-        
-        public void MoveDown(int count = 1) => Console.Write($"{escapePrefix}{count}B");
+        public TextCursor(IConsole parent)
+        {
+            terminal = parent;
 
-        public void MoveLeft(int count = 1) => Console.Write($"{escapePrefix}{count}D");
+        }
+
+        public void MoveUp(int count = 1) => terminal.Write($"{escapePrefix}{count}A");
         
-        public void MoveRight(int count = 1) => Console.Write($"{escapePrefix}{count}C");
+        public void MoveDown(int count = 1) => terminal.Write($"{escapePrefix}{count}B");
+
+        public void MoveLeft(int count = 1) => terminal.Write($"{escapePrefix}{count}D");
         
-        public void SetColumn(int count) => Console.Write($"{escapePrefix}{count}G");
+        public void MoveRight(int count = 1) => terminal.Write($"{escapePrefix}{count}C");
         
-        public void ClearRemaining() => Console.Write($"{escapePrefix}K");
+        public void SetColumn(int count) => terminal.Write($"{escapePrefix}{count}G");
+        
+        public void ClearRemaining() => terminal.Write($"{escapePrefix}K");
 
         /* This method is very much a WIP. Right now it causes the shell to hang
-         *  unless it's launched before the prompt is written. 
-         *  Not sure why yet.*/
+        *  unless it's launched before the prompt is written. 
+        *  Not sure why yet.*/
         public (int row, int col) GetPosition()
         {
             int row = Console.CursorTop,
@@ -174,10 +208,8 @@ public class ShellReader : IShellReader, IDebuggable
         }
 
         public void SetPosition(int row, int col) 
-            => Console.WriteLine($"{escapePrefix}{row};{col}H");
+            => terminal.WriteLine($"{escapePrefix}{row};{col}H");
 
     }
-
-    #endregion
 
 }
