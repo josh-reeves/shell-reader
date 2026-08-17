@@ -4,6 +4,24 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- Package Metadata -->
+    <AssemblyName>ShellReader</AssemblyName>
+    <Title>ShellReader</Title>
+    <PackageID>ShellReader</PackageID>
+    <PackageVersion>0.9.3</PackageVersion>
+    <PackageTags>readline;gnu;console;shell;terminal;ansi;consolekeyinfo;command-history;prompt</PackageTags>
+    <Authors>Joshua Reeves, Toni Solarin-Sodara, Tore Fuglestad, .NET Foundation and Contributors</Authors>
+    <PackageProjectUrl>https://github.com/josh-reeves/shell-reader</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/josh-reeves/shell-reader</RepositoryUrl>
+    <Description>A C# programmable alternative for GNU-Readline like libraries for .NET.</Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
 
 </Project>

@@ -1,13 +1,13 @@
-using Interfaces;
+using ShellReader.Interfaces;
 
 namespace ShellReader;
 
-public class ShellReader : IShellReader, IDebuggable
+public class ShellReader : IShellReader
 {
     #region Fields
     private string input;
 
-    private ITextCursor cursor => Terminal.Cursor;
+    private ITextCursor cursor;
 
     #endregion
 
@@ -19,7 +19,11 @@ public class ShellReader : IShellReader, IDebuggable
         
         KeyMap = keyMap ?? new Dictionary<ConsoleKeyInfo, Func<string, string>>();
 
-        Terminal = terminal ??= new Terminal();
+        terminal ??= new Terminal();
+        
+        Terminal = terminal;
+
+        cursor = terminal.Cursor;
 
     }
 
@@ -37,26 +41,26 @@ public class ShellReader : IShellReader, IDebuggable
 
     public IDictionary<ConsoleKeyInfo, Func<string, string>> KeyMap { get; }
 
-    public IDebugger? Debugger { get; set; }
-
     #endregion
 
     #region Methods
     private Func<string, string>? RetrieveKeyMap(IDictionary<ConsoleKeyInfo, Func<string, string>> map, ConsoleKeyInfo keyInfo)
     {
+        ConsoleKeyInfo temp = new(keyInfo.KeyChar, keyInfo.Key, false, false, false);
+
+        Func<string, string>? result = null;
+
         foreach (ConsoleKeyInfo compare in map.Keys)
         {
-            Debugger?.WriteLine($"Comparing {keyInfo.Modifiers}{keyInfo.Key} to {compare.Modifiers}{compare.Key}", ["INPUT"]);
-
-            if (MeetsKeyModifierMinimum(keyInfo, compare))
+            if (MeetsKeyModifierMinimum(keyInfo, compare) && MeetsKeyModifierMinimum(compare, temp))
             {
-                return map[compare];
+                result = map[compare];
                 
             }
             
         }
-        
-        return null;
+
+        return result;
 
     }
 
@@ -64,8 +68,8 @@ public class ShellReader : IShellReader, IDebuggable
     {
         if (keyInfo.Key == compare.Key && (keyInfo.Modifiers & compare.Modifiers) == compare.Modifiers)
         {
-            Debugger?.WriteLine("Key and minimum modifier requirements met.", ["INPUT"]);
             return true;
+
         }
         
         return false;
@@ -74,8 +78,6 @@ public class ShellReader : IShellReader, IDebuggable
 
     private void BroadcastInput(ConsoleKeyInfo keyInfo)
     {
-        Debugger?.WriteLine($"Keypress received: {keyInfo.Modifiers}{keyInfo.Key}", ["INPUT"]);
-
         InputReceived?.Invoke(this, keyInfo);
         
     }
@@ -100,8 +102,6 @@ public class ShellReader : IShellReader, IDebuggable
 
             if (func is not null)
             {
-                Debugger?.WriteLine($"Executing mapped action: {func.Method.Name}", ["INPUT"]);
-
                 input = func(input);
 
                 continue;
@@ -110,8 +110,6 @@ public class ShellReader : IShellReader, IDebuggable
 
             if (!char.IsControl(keyInfo.KeyChar))
             {
-                Debugger?.WriteLine($"Adding character to input string: {keyInfo.KeyChar}", ["INPUT"]);
-
                 input += keyInfo.KeyChar;
                 
                 Terminal.Write(keyInfo.KeyChar);
@@ -119,8 +117,6 @@ public class ShellReader : IShellReader, IDebuggable
             }
 
         }
-
-        Debugger?.WriteLine($"Exiting input loop.", ["INPUT"]);
 
         Terminal.WriteLine();
 
@@ -143,11 +139,6 @@ public class ShellReader : IShellReader, IDebuggable
         Terminal.Write(insert);
 
     }
-
-    #endregion
-
-    #region Structs
-
 
     #endregion
 

@@ -1,4 +1,4 @@
-namespace Interfaces;
+namespace ShellReader.Interfaces;
 
 public interface IShellReader
 {

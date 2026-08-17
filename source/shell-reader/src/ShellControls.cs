@@ -1,4 +1,4 @@
-using Interfaces;
+using ShellReader.Interfaces;
 
 namespace ShellReader;
 
