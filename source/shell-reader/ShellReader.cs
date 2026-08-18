@@ -55,7 +55,8 @@ public class ShellReader : IShellReader
             if (MeetsKeyModifierMinimum(keyInfo, compare) && MeetsKeyModifierMinimum(compare, temp))
             {
                 result = map[compare];
-                
+                temp = compare;
+
             }
             
         }
@@ -148,7 +149,7 @@ public class Terminal : IConsole
 {
     public Terminal()
     {
-        Cursor = new TextCursor();
+        Cursor = new TextCursor(this);
     
     }
 
@@ -160,7 +161,7 @@ public class Terminal : IConsole
 
     public void WriteLine(object? value = null) => Console.WriteLine(value);
 
-    private struct TextCursor : ITextCursor
+    private class TextCursor : ITextCursor
     {
         private const char Escape = '\u001B';
 
