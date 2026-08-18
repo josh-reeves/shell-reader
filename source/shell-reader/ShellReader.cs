@@ -5,16 +5,12 @@ namespace ShellReader;
 public class ShellReader : IShellReader
 {
     #region Fields
-    private string input;
-
-    private ITextCursor cursor;
+    private ITextCursor cursor => Terminal.Cursor;
 
     #endregion
 
     public ShellReader(string prompt = "", IConsole? terminal = null, IDictionary<ConsoleKeyInfo, Func<string, string>>? keyMap = null)
     {
-        input = string.Empty;
-
         Prompt = prompt;
         
         KeyMap = keyMap ?? new Dictionary<ConsoleKeyInfo, Func<string, string>>();
@@ -22,8 +18,6 @@ public class ShellReader : IShellReader
         terminal ??= new Terminal();
         
         Terminal = terminal;
-
-        cursor = terminal.Cursor;
 
     }
 
@@ -44,15 +38,15 @@ public class ShellReader : IShellReader
     #endregion
 
     #region Methods
-    private Func<string, string>? RetrieveKeyMap(IDictionary<ConsoleKeyInfo, Func<string, string>> map, ConsoleKeyInfo keyInfo)
+    private Func<string, string>? RetrieveKeyMap(IDictionary<ConsoleKeyInfo, Func<string, string>> map, ConsoleKeyInfo keyPress)
     {
-        ConsoleKeyInfo temp = new(keyInfo.KeyChar, keyInfo.Key, false, false, false);
+        ConsoleKeyInfo temp = new(keyPress.KeyChar, keyPress.Key, false, false, false);
 
         Func<string, string>? result = null;
 
         foreach (ConsoleKeyInfo compare in map.Keys)
         {
-            if (MeetsKeyModifierMinimum(keyInfo, compare) && MeetsKeyModifierMinimum(compare, temp))
+            if (MeetsKeyModifierMinimum(keyPress, compare) && MeetsKeyModifierMinimum(compare, temp))
             {
                 result = map[compare];
                 temp = compare;
@@ -65,9 +59,9 @@ public class ShellReader : IShellReader
 
     }
 
-    private bool MeetsKeyModifierMinimum(ConsoleKeyInfo keyInfo, ConsoleKeyInfo compare)
+    private bool MeetsKeyModifierMinimum(ConsoleKeyInfo keyPress, ConsoleKeyInfo compare)
     {
-        if (keyInfo.Key == compare.Key && (keyInfo.Modifiers & compare.Modifiers) == compare.Modifiers)
+        if (keyPress.Key == compare.Key && (keyPress.Modifiers & compare.Modifiers) == compare.Modifiers)
         {
             return true;
 
@@ -83,9 +77,15 @@ public class ShellReader : IShellReader
         
     }
 
+    public string ReadPassword(string? prompt = null)
+    {
+        return Read(prompt);
+
+    }
+
     public string Read(string? prompt = null)
     {
-        input = string.Empty;
+        string input = string.Empty;
 
         prompt ??= Prompt;
         
@@ -95,11 +95,11 @@ public class ShellReader : IShellReader
 
         while (IsReading)
         {
-            ConsoleKeyInfo keyInfo = Terminal.ReadKey(intercept: true);
+            ConsoleKeyInfo keyPress = Terminal.ReadKey(intercept: true);
 
-            BroadcastInput(keyInfo);
+            BroadcastInput(keyPress);
 
-            Func<string, string>? func = RetrieveKeyMap(KeyMap, keyInfo);
+            Func<string, string>? func = RetrieveKeyMap(KeyMap, keyPress);
 
             if (func is not null)
             {
@@ -109,11 +109,11 @@ public class ShellReader : IShellReader
 
             }
 
-            if (!char.IsControl(keyInfo.KeyChar))
+            if (!char.IsControl(keyPress.KeyChar))
             {
-                input += keyInfo.KeyChar;
+                input += keyPress.KeyChar;
                 
-                Terminal.Write(keyInfo.KeyChar);
+                Terminal.Write(keyPress.KeyChar);
 
             }
 

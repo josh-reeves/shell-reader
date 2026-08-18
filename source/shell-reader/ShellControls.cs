@@ -45,7 +45,7 @@ public class ShellControls : IShellControls
         if (input.Length > 0)
         {
             input = input.Remove(input.Length - 1);
-            Console.Write("\b \b");
+            Reader.Terminal.Write("\b \b");
         
         }
 
@@ -70,7 +70,7 @@ public class ShellControls : IShellControls
         }
 
         Reader.ClearLine(Reader.Prompt.Length);
-        Console.Write(input);
+        Reader.Terminal.Write(input);
 
         return input;
 
@@ -87,7 +87,7 @@ public class ShellControls : IShellControls
         }
 
         Reader.ClearLine(Reader.Prompt.Length);
-        Console.Write(input);
+        Reader.Terminal.Write(input);
 
         return input;
         
