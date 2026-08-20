@@ -1,6 +1,6 @@
 # ShellReader
 
-Shell reader is a programmable alternative for GNU Readline library similar to [tonerdo/readline](https://github.com/tonerdo/readline) and [rafntor/readline.ext](https://github.com/rafntor/readline.ext).
+Shell reader is a programmable alternative for GNU Readline-like libraries similar to [tonerdo/readline](https://github.com/tonerdo/readline) and [rafntor/readline.ext](https://github.com/rafntor/readline.ext).
 
 Like these other projects, the goal of ShellReader is to provide a replacement for Console.ReadLine that provides some of the terminal features found in unix shells. Unlike readline or readline.ext, however ShellReader aims to be a generalized, configurable solution that can be used to recreate those features, extend them or create entirely new ones.
 
