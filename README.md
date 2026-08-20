@@ -21,8 +21,8 @@ This is primarily accomplished via the following design changes:
 - Interfaces have been included for all of the classes in the ShellReader library. This makes it easy to create your own implemenation of any of the included classes.
     - As part of this, the IConsole interface from readline.ext was kept, although the requirement for an "AdvanceCursor" method was removed, and the requirement for a new "TextCursor" property was added. ShellReader does **NOT** include the KeyParser class or the copy of the Console Implementation provided by readline.ext.<br><ul>A basic implementation of this interface, "Terminal," with a TextCursor child class is provided with the library. In order to minimize additional complexity, if no terminal object is provided to a ShellReader via an optional argument at instatiation, an instance of the Terminal class is created and automatically assigned to the ShellReader's Terminal property. This property is publicly accessible, and can be updated after instantiation if desired.
 
-      In order to minimize the implications of the hard dependency created by this approach, both the ShellReader and Terminal classes are defined in the same ShellReader.cs file.</ul>
-    - Unlike readline and readline.ext, ShellReader makes very little use of static classes and methods. Instead, the ShellReader class is instantiated to create a reader object.
+      In order to minimize the implications of the hard dependency created by this approach, both the ShellReader and Terminal clhttps://github.com/josh-reeves/shell-reader/blob/main/README.mdasses are defined in the same ShellReader.cs file.</ul>
+- Unlike readline and readline.ext, ShellReader makes very little use of static classes and methods. Instead, the ShellReader class is instantiated to create a reader object.
 
 ## Getting Started
 ShellReader is still in early development, and there are still a few features that need to be added, including:
