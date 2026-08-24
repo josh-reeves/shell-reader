@@ -93,6 +93,31 @@ public class ShellControls : IShellControls
         
     }
 
+    public string LeftArrow(string input)
+    {
+        return input;
+        
+    }
+
+    public string RightArrow(string input)
+    {
+        Reader.Terminal.Cursor.MoveRight();
+
+        return input;
+        
+    }
+
+    public string Home(string input)
+    {
+        Reader.Terminal.Cursor.SetColumn(1 + Reader.Prompt.Length);
+        
+        return input;
+
+    }
+
+    public string CtrlA(string input)
+        => Home(input);
+
     #endregion
 
 }

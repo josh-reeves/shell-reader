@@ -16,6 +16,14 @@ public interface IShellControls
 
     public string DownArrow(string input);
 
+    public string LeftArrow(string input);
+
+    public string RightArrow(string input);
+
+    public string Home(string input);
+
+    public string CtrlA(string input);
+
     #endregion
     
 }
