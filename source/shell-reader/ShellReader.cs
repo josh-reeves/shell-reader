@@ -88,7 +88,7 @@ public class ShellReader : IShellReader
         string input = string.Empty;
 
         prompt ??= Prompt;
-        
+
         Terminal.Write(prompt);
 
         IsReading = true;
@@ -195,6 +195,19 @@ public class Terminal : IConsole
             int row = Console.CursorTop,
                 col = Console.CursorLeft;
             
+
+
+            DateTime timeout = DateTime.Now.AddSeconds(2);
+
+            string input = string.Empty;
+
+            Console.Out.Flush();
+            Console.Write("\x1b[6n");
+            Console.Out.Flush();
+            Console.WriteLine(Console.OpenStandardInput().ReadByte());
+
+            Console.OpenStandardInput().Flush();
+
             return (row, col);
         
         }

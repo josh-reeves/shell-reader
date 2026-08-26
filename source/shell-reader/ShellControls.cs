@@ -10,7 +10,7 @@ public class ShellControls : IShellControls
     {
         Reader = reader;
         
-        History = [];        
+        History = [string.Empty];        
     
         histIndex = 0;
 
@@ -28,13 +28,14 @@ public class ShellControls : IShellControls
     {
         if (!string.IsNullOrWhiteSpace(input))
         {
-            History.Add(input);
+            History[History.Count - 1] = input;
+            History.Add(string.Empty);
 
         }
 
-        Reader.IsReading = false;
-
         histIndex = History.Count - 1;
+
+        Reader.IsReading = false;
         
         return input;
 
@@ -55,12 +56,6 @@ public class ShellControls : IShellControls
 
     public string UpArrow(string input)
     {
-        if (histIndex == History.Count - 1)
-        {
-            History[History.Count - 1] = input;
-            
-        }
-
         if (histIndex > 0)
         {
             histIndex--;
