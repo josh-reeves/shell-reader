@@ -1,3 +1,4 @@
+using System.Text;
 using ShellReader.Interfaces;
 
 namespace ShellReader;
@@ -88,7 +89,7 @@ public class ShellReader : IShellReader
         string input = string.Empty;
 
         prompt ??= Prompt;
-
+ 
         Terminal.Write(prompt);
 
         IsReading = true;
@@ -147,69 +148,147 @@ public class ShellReader : IShellReader
 
 public class Terminal : IConsole
 {
+    #region Constructor(s)
     public Terminal()
-    {
+    {        
         Cursor = new TextCursor(this);
-    
+
     }
+
+    #endregion
 
     public ITextCursor Cursor { get; }
 
-    public ConsoleKeyInfo ReadKey(bool intercept = false) => Console.ReadKey(intercept);
+    public ConsoleKeyInfo ReadKey(bool intercept = false) => ((TextCursor)Cursor).ReadKey(intercept);
 
-    public void Write(object? value = null) => Console.Write(value);
+    public void Write(object? value = null) => ((TextCursor)Cursor).Write(value);
 
-    public void WriteLine(object? value = null) => Console.WriteLine(value);
+    public void WriteLine(object? value = null) => ((TextCursor)Cursor).WriteLine(value);
 
     private class TextCursor : ITextCursor
     {
+        #region Fields
         private const char Escape = '\u001B';
+        
+        private int col;
 
         private string escapePrefix => $"{Escape}[";
 
-        private IConsole terminal;
+        private Terminal terminal;
+
+        #endregion
 
         public TextCursor(IConsole parent)
         {
-            terminal = parent;
+            col = 0;
+
+            terminal = (Terminal)parent;
 
         }
 
-        public void MoveUp(int count = 1) => terminal.Write($"{escapePrefix}{count}A");
-        
-        public void MoveDown(int count = 1) => terminal.Write($"{escapePrefix}{count}B");
+        public ConsoleKeyInfo ReadKey(bool intercept = false)
+        {
+            ConsoleKeyInfo keyInfo = Console.ReadKey(intercept);
 
-        public void MoveLeft(int count = 1) => terminal.Write($"{escapePrefix}{count}D");
-        
-        public void MoveRight(int count = 1) => terminal.Write($"{escapePrefix}{count}C");
-        
-        public void SetColumn(int count) => terminal.Write($"{escapePrefix}{count}G");
-        
-        public void ClearRemaining() => terminal.Write($"{escapePrefix}K");
+            if (!char.IsControl(keyInfo.KeyChar))
+            {
+                col++;
 
-        /* This method is very much a WIP. Right now it causes the shell to hang
-        *  unless it's launched before the prompt is written. 
-        *  Not sure why yet.*/
+            }
+            
+            return keyInfo;
+
+        }
+
+        public void Write(object? value = null)
+        {
+            Console.Write(value);
+
+            if (value?.ToString()?.Contains(escapePrefix) ?? true)
+            {
+                return;
+
+            }
+
+            col += value?.ToString()?.Length ?? 0;
+        
+        }
+
+        public void WriteLine(object? value = null)
+        {
+            Console.WriteLine(value);
+
+            col = 0;
+            
+        }
+
+        public void MoveUp(int count = 1) => Console.Write($"{escapePrefix}{count}A");
+        
+        public void MoveDown(int count = 1) => Console.Write($"{escapePrefix}{count}B");
+
+        public void MoveLeft(int count = 1) => Console.Write($"{escapePrefix}{count}D");
+        
+        public void MoveRight(int count = 1) => Console.Write($"{escapePrefix}{count}C");
+        
+        public void SetColumn(int count) => Console.Write($"{escapePrefix}{count}G");
+        
+        public void ClearRemaining() => Console.Write($"{escapePrefix}K");
+
+        /* This method is still very much a WIP. I think it should work now, but
+         *  it's awkward. */
         public (int row, int col) GetPosition()
         {
-            int row = Console.CursorTop,
-                col = Console.CursorLeft;
+            while (Console.KeyAvailable) { Console.ReadKey(true); }
             
+            string dsr = string.Empty;
 
+            DateTime timeout = DateTime.Now.AddMilliseconds(100);
 
-            DateTime timeout = DateTime.Now.AddSeconds(2);
+            /* The cursor's column is still being tracked virtually with a
+             *  private variable. This is gross, but it makes it safe to
+             *  manually move the cursor back to the start of the line:*/
+            SetColumn(1);
 
-            string input = string.Empty;
-
+            /* The DSR ANSI sequence seems to work reliably as long as it's
+                called before any other text: */
+            Console.Write($"{escapePrefix}6n");
             Console.Out.Flush();
-            Console.Write("\x1b[6n");
-            Console.Out.Flush();
-            Console.WriteLine(Console.OpenStandardInput().ReadByte());
 
-            Console.OpenStandardInput().Flush();
+            ConsoleKeyInfo? keyInfo = null;
 
-            return (row, col);
-        
+            while (keyInfo?.KeyChar != 'R' && DateTime.Now < timeout)
+            {
+                if (Console.KeyAvailable)
+                {
+                    keyInfo = Console.ReadKey(true);
+
+                    dsr += keyInfo?.KeyChar;
+
+                }                
+                
+            }
+
+            dsr = dsr.Substring(2, dsr.Length - 3);
+
+            string[] result = dsr.Split(';');
+
+            /* Now that we have a DSR result with the cursor's row, move the
+             *  cursor back to the correct/expected column:*/
+            SetColumn(col + 1);
+
+            /* If everything went well, return the row parsed from the DSR along
+             *  with the tracked column. Increment the column by 1 because ANSI
+             *  coordinates are 1-indexed:*/
+            if (result.Count() >= 2 && int.TryParse(result[0], out int row))
+            { 
+                return (row, col + 1);
+
+            }
+
+            /* Console.CursorTop() can freeze in some situations. Use as last
+                resort: */
+            return (Console.CursorTop + 1, col + 1);
+
         }
 
         public void SetPosition(int row, int col) 
