@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text;
 using ShellReader.Interfaces;
 
@@ -191,6 +192,11 @@ public class ShellReader : IShellReader
 public class Terminal : IConsole
 {
     #region Fields
+    private const int STDINFILE = 0;
+    private const int TCSANOW = 0;
+    private const uint ICANON = 0x00000002;
+    private const uint ECHO = 0x00000008;
+
     private readonly TextCursor cursor;
 
     #endregion
@@ -210,11 +216,41 @@ public class Terminal : IConsole
     #endregion
 
     #region Methods
+    [DllImport("libc", EntryPoint = "tcgetattr")]
+    private static extern int TCGetAttr(int fd, out Termios termios);
+
+    [DllImport("libc", EntryPoint = "tcsetattr")]
+    private static extern int TCSetAttr(int fd, int optional, ref Termios termios); 
+
+    [DllImport("libc", EntryPoint = "read")]
+    private static extern IntPtr Read(int fd, out byte buf, UIntPtr count);
+
     public ConsoleKeyInfo ReadKey(bool intercept = false) => cursor.ReadKey(intercept);
 
     public void Write(object? value = null) => cursor.Write(value);
 
     public void WriteLine(object? value = null) => cursor.WriteLine(value);
+
+    #endregion
+
+    #region Structures
+    /* "The termios functions describe a general terminal interface that
+     *  is provided to control asynchronous communications ports."
+     *  https://man7.org/linux/man-pages/man3/termios.3.html
+     *
+     *  This is a C thing, so the struct will need to be sequential: */
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Termios
+    {
+        public uint c_iflag; // Input modes
+        public uint c_oflag; // Output modes
+        public uint c_cflag; // Control modes
+        public uint c_lflag; // Local modes
+
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 20)]
+        public byte[] c_cc; // Special characters
+        
+    }
 
     #endregion
 
@@ -224,141 +260,109 @@ public class Terminal : IConsole
         #region Fields
         private const char Escape = '\u001B';
         
-        private int col;
         private string escapePrefix => $"{Escape}[";
 
         #endregion
 
         #region Constructor(s)
-        public TextCursor()
-        {
-            col = 0;
-
-        }
-
+        public TextCursor() {}
         #endregion
 
         #region Properties
-        public int Column { get => col + 1; }
+        public int Column { get => GetPosition().col; }
 
         public int Row { get => GetPosition().row; }
 
         #endregion
 
         #region Methods
-        public ConsoleKeyInfo ReadKey(bool intercept = false)
-        {
-            ConsoleKeyInfo keyInfo = Console.ReadKey(intercept);
+        public ConsoleKeyInfo ReadKey(bool intercept = false) =>
+            Console.ReadKey(intercept);
 
-            if (!intercept && !char.IsControl(keyInfo.KeyChar))
-            {
-                col++;
-
-            }
-            
-            return keyInfo;
-
-        }
-
-        public void Write(object? value = null)
-        {
+        public void Write(object? value = null) =>
             Console.Write(value);
 
-            if (value?.ToString()?.Contains(escapePrefix) ?? true)
-            {
-                return;
-
-            }
-
-            col += value?.ToString()?.Length ?? 0;
-        
-        }
-
-        public void WriteLine(object? value = null)
-        {
+        public void WriteLine(object? value = null) =>
             Console.WriteLine(value);
 
-            col = 0;
-            
-        }
+        public void MoveUp(int count = 1) => 
+            Write($"{escapePrefix}{count}A");
+        
+        public void MoveDown(int count = 1) => 
+            Write($"{escapePrefix}{count}B");
 
-        public void MoveUp(int count = 1) => Write($"{escapePrefix}{count}A");
+        public void MoveLeft(int count = 1) => 
+            Write($"{escapePrefix}{count}D");
         
-        public void MoveDown(int count = 1) => Write($"{escapePrefix}{count}B");
-
-        public void MoveLeft(int count = 1) => Write($"{escapePrefix}{count}D");
+        public void MoveRight(int count = 1) => 
+            Write($"{escapePrefix}{count}C");
         
-        public void MoveRight(int count = 1) => Write($"{escapePrefix}{count}C");
-        
-        public void SetColumn(int count)
-        {
+        public void SetColumn(int count) =>
             Write($"{escapePrefix}{count}G");
-
-            col = count - 1;
-
-        }
         
         public void ClearRemaining() => Write($"{escapePrefix}K");
 
-        /* This method is still very much a WIP. I think it should work now, but
-         *  it's awkward. A better alternative would probably be importing from 
-         *  libc and properly disabling canonical mode on linux systems, but 
-         *  that's gross in its own way. */
         public (int row, int col) GetPosition()
         {
-            while (Console.KeyAvailable) { Console.ReadKey(true); }
+            if (OperatingSystem.IsWindows())
+            {
+                return (Console.CursorTop + 1, Console.CursorLeft + 1);
+
+            }
+
+            TCGetAttr(STDINFILE, out Termios original);
+            Termios raw = original;
             
+            /* Ensure cannoncial and echo flags are disabled by inverting them, 
+             *  ANDing them against the original values, and assigning the 
+             *  result:*/
+            raw.c_lflag &= ~(ICANON | ECHO);
+
+            TCSetAttr(STDINFILE, TCSANOW, ref raw);
+
+            while (Console.KeyAvailable) { Console.ReadKey(true); }
+
+            char terminator = 'R';       
             string dsr = string.Empty;
 
             DateTime timeout = DateTime.Now.AddMilliseconds(100);
 
-            /* The cursor's column is still being tracked virtually with a
-             *  private variable. This is gross, but it makes it safe to
-             *  manually move the cursor back to the start of the line:*/
-            int temp = col;
-            SetColumn(1);
-
-            /* The DSR ANSI sequence seems to work reliably as long as it's
-                called before any other text: */
             Write($"{escapePrefix}6n");
-            Console.Out.Flush();
 
-            /* Now that we have a DSR result with the cursor's row, move the
-             *  cursor back to the correct/expected column:*/
-            col = temp;
-            SetColumn(col + 1);
-
-            // Now we can capture the DSR:
-            ConsoleKeyInfo? keyInfo = null;
-
-            while (keyInfo?.KeyChar != 'R' && DateTime.Now < timeout)
+            while (!dsr.EndsWith(terminator) && DateTime.Now < timeout)
             {
-                if (Console.KeyAvailable)
-                {
-                    keyInfo = ReadKey(true);
-
-                    dsr += keyInfo?.KeyChar;
-
-                }                
+                long bytesRead = Read(STDINFILE, out byte b, 1);
                 
-            }
+                if (bytesRead <= 0)
+                {
+                    continue;
 
-            dsr = dsr.Substring(2, dsr.Length - 3);
+                }
 
-            string[] result = dsr.Split(';');
-
-            /* If everything went well, return the row parsed from the DSR along
-             *  with the tracked column. Increment the column by 1 because ANSI
-             *  coordinates are 1-indexed:*/
-            if (result.Count() >= 2 && int.TryParse(result[0], out int row))
-            { 
-                return (row, col + 1);
+                dsr += (char)b;
 
             }
 
-            /* Console.CursorTop() can freeze in some situations. Use as last
-                resort: */
-            return (Console.CursorTop + 1, col + 1);
+            // Restore original terminal mode:
+            TCSetAttr(STDINFILE, TCSANOW, ref original);
+
+            try
+            {
+                dsr = dsr.Substring(2, dsr.Length - 3);
+
+                string[] result = dsr.Split(';');
+
+                int row = int.Parse(result[0]), 
+                    col = int.Parse(result[1]);
+                    
+                return (row, col);
+
+            }
+            catch
+            {
+                return (Console.CursorTop + 1, Console.CursorLeft + 1);
+
+            }
 
         }
 
@@ -372,3 +376,5 @@ public class Terminal : IConsole
     #endregion
 
 }
+
+
