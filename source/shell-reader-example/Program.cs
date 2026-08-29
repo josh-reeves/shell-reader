@@ -17,7 +17,8 @@ class Program
 
         string input = string.Empty,
                exitStr = "exit",
-               welcomeMsg = "ShellReader Example. Type exit to quit:";
+               passwordStr = "password",
+               welcomeMsg = "ShellReader Example. Type password to enter password mode. Type exit to quit:";
 
         Console.WriteLine(welcomeMsg);
 
@@ -25,7 +26,16 @@ class Program
         {
             input = reader.Read();
 
+            if (input.ToLower() == passwordStr)
+            {
+                input = reader.ReadPassword();
+    
+            }
+
+            Console.WriteLine($"Input Received: {input}");
+
         }
 
     }
+
 }

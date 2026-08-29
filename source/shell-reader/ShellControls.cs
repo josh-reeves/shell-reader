@@ -26,7 +26,7 @@ public class ShellControls : IShellControls
     #region Methods
     public string Enter(string input)
     {
-        if (!string.IsNullOrWhiteSpace(input))
+        if (!string.IsNullOrWhiteSpace(input) && !Reader.IsPassword)
         {
             History[History.Count - 1] = input;
             History.Add(string.Empty);
@@ -103,8 +103,8 @@ public class ShellControls : IShellControls
     }
 
     public string Home(string input)
-    {
-        Reader.Terminal.Cursor.SetColumn(1 + Reader.Prompt.Length);
+    {                
+        Reader.Terminal.Cursor.SetColumn(Reader.Prompt.Length + 1);
         
         return input;
 

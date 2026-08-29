@@ -5,7 +5,9 @@ public interface IShellReader
     #region Properties
     public bool IsReading { get; set; }
 
-    public string Prompt { get; set; }
+    public bool IsPassword { get; }
+
+    public string Prompt { get; }
 
     public IConsole Terminal { get; set; }
 
@@ -19,7 +21,7 @@ public interface IShellReader
     #endregion
     
     #region Methods
-    public string Read(string? prompt = null);
+    public string Read(string? prompt = null, bool isPassword = false);
 
     public void ClearLine(int startPos = 0);
 

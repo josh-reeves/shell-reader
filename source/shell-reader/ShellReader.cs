@@ -6,12 +6,16 @@ namespace ShellReader;
 public class ShellReader : IShellReader
 {
     #region Fields
+    private string mask;
+
     private ITextCursor cursor => Terminal.Cursor;
 
     #endregion
 
     public ShellReader(string prompt = "", IConsole? terminal = null, IDictionary<ConsoleKeyInfo, Func<string, string>>? keyMap = null)
     {
+        mask = string.Empty;
+
         Prompt = prompt;
         
         KeyMap = keyMap ?? new Dictionary<ConsoleKeyInfo, Func<string, string>>();
@@ -30,7 +34,9 @@ public class ShellReader : IShellReader
     #region Properties
     public bool IsReading { get; set; }
 
-    public string Prompt { get; set; }
+    public bool IsPassword { get; private set; }
+
+    public string Prompt { get; private set; }
 
     public IConsole Terminal { get; set; }
 
@@ -78,19 +84,55 @@ public class ShellReader : IShellReader
         
     }
 
-    public string ReadPassword(string? prompt = null)
+    private string UpdateTextAtCursor(string original, string insert)
     {
-        return Read(prompt);
+        string updated = original;
+
+        int textLength = IsPassword ? original.Length * mask.Length : original.Length;
+
+        if (Terminal.Cursor.Column - Prompt.Length <= textLength)
+        {
+            int i = Terminal.Cursor.Column - Prompt.Length - 1;
+
+            updated = original.Remove(i, insert.Length).Insert(i, insert);
+        
+        }
+        else
+        {
+            updated += insert;
+            
+        }
+
+        insert = IsPassword ? mask : insert;
+
+        Terminal.Write(insert);
+    
+        return updated;
 
     }
 
-    public string Read(string? prompt = null)
+    public string ReadPassword(string? prompt = null, string maskSeq = "")
     {
-        string input = string.Empty;
+        mask = maskSeq;
 
-        prompt ??= Prompt;
- 
-        Terminal.Write(prompt);
+        return Read(prompt, true);
+
+    }
+
+    public string Read(string? prompt = null, bool isPassword = false)
+    {
+        string input = string.Empty,
+               temp = Prompt;
+
+        IsPassword = isPassword;
+
+        if (prompt is not null)
+        {
+            Prompt = prompt;
+
+        }
+
+        Terminal.Write(Prompt);
 
         IsReading = true;
 
@@ -112,15 +154,15 @@ public class ShellReader : IShellReader
 
             if (!char.IsControl(keyPress.KeyChar))
             {
-                input += keyPress.KeyChar;
-                
-                Terminal.Write(keyPress.KeyChar);
+                input = UpdateTextAtCursor(input, keyPress.KeyChar.ToString());
 
             }
 
         }
 
         Terminal.WriteLine();
+
+        Prompt = temp;
 
         return input;
 
@@ -148,49 +190,67 @@ public class ShellReader : IShellReader
 
 public class Terminal : IConsole
 {
+    #region Fields
+    private readonly TextCursor cursor;
+
+    #endregion
+
     #region Constructor(s)
     public Terminal()
     {        
-        Cursor = new TextCursor(this);
+        cursor = new TextCursor();
 
     }
 
     #endregion
 
-    public ITextCursor Cursor { get; }
+    #region Properties
+    public ITextCursor Cursor { get => cursor; }
 
-    public ConsoleKeyInfo ReadKey(bool intercept = false) => ((TextCursor)Cursor).ReadKey(intercept);
+    #endregion
 
-    public void Write(object? value = null) => ((TextCursor)Cursor).Write(value);
+    #region Methods
+    public ConsoleKeyInfo ReadKey(bool intercept = false) => cursor.ReadKey(intercept);
 
-    public void WriteLine(object? value = null) => ((TextCursor)Cursor).WriteLine(value);
+    public void Write(object? value = null) => cursor.Write(value);
 
+    public void WriteLine(object? value = null) => cursor.WriteLine(value);
+
+    #endregion
+
+    #region Subclasses
     private class TextCursor : ITextCursor
     {
         #region Fields
         private const char Escape = '\u001B';
         
         private int col;
-
         private string escapePrefix => $"{Escape}[";
-
-        private Terminal terminal;
 
         #endregion
 
-        public TextCursor(IConsole parent)
+        #region Constructor(s)
+        public TextCursor()
         {
             col = 0;
 
-            terminal = (Terminal)parent;
-
         }
 
+        #endregion
+
+        #region Properties
+        public int Column { get => col + 1; }
+
+        public int Row { get => GetPosition().row; }
+
+        #endregion
+
+        #region Methods
         public ConsoleKeyInfo ReadKey(bool intercept = false)
         {
             ConsoleKeyInfo keyInfo = Console.ReadKey(intercept);
 
-            if (!char.IsControl(keyInfo.KeyChar))
+            if (!intercept && !char.IsControl(keyInfo.KeyChar))
             {
                 col++;
 
@@ -222,20 +282,28 @@ public class Terminal : IConsole
             
         }
 
-        public void MoveUp(int count = 1) => Console.Write($"{escapePrefix}{count}A");
+        public void MoveUp(int count = 1) => Write($"{escapePrefix}{count}A");
         
-        public void MoveDown(int count = 1) => Console.Write($"{escapePrefix}{count}B");
+        public void MoveDown(int count = 1) => Write($"{escapePrefix}{count}B");
 
-        public void MoveLeft(int count = 1) => Console.Write($"{escapePrefix}{count}D");
+        public void MoveLeft(int count = 1) => Write($"{escapePrefix}{count}D");
         
-        public void MoveRight(int count = 1) => Console.Write($"{escapePrefix}{count}C");
+        public void MoveRight(int count = 1) => Write($"{escapePrefix}{count}C");
         
-        public void SetColumn(int count) => Console.Write($"{escapePrefix}{count}G");
+        public void SetColumn(int count)
+        {
+            Write($"{escapePrefix}{count}G");
+
+            col = count - 1;
+
+        }
         
-        public void ClearRemaining() => Console.Write($"{escapePrefix}K");
+        public void ClearRemaining() => Write($"{escapePrefix}K");
 
         /* This method is still very much a WIP. I think it should work now, but
-         *  it's awkward. */
+         *  it's awkward. A better alternative would probably be importing from 
+         *  libc and properly disabling canonical mode on linux systems, but 
+         *  that's gross in its own way. */
         public (int row, int col) GetPosition()
         {
             while (Console.KeyAvailable) { Console.ReadKey(true); }
@@ -247,20 +315,27 @@ public class Terminal : IConsole
             /* The cursor's column is still being tracked virtually with a
              *  private variable. This is gross, but it makes it safe to
              *  manually move the cursor back to the start of the line:*/
+            int temp = col;
             SetColumn(1);
 
             /* The DSR ANSI sequence seems to work reliably as long as it's
                 called before any other text: */
-            Console.Write($"{escapePrefix}6n");
+            Write($"{escapePrefix}6n");
             Console.Out.Flush();
 
+            /* Now that we have a DSR result with the cursor's row, move the
+             *  cursor back to the correct/expected column:*/
+            col = temp;
+            SetColumn(col + 1);
+
+            // Now we can capture the DSR:
             ConsoleKeyInfo? keyInfo = null;
 
             while (keyInfo?.KeyChar != 'R' && DateTime.Now < timeout)
             {
                 if (Console.KeyAvailable)
                 {
-                    keyInfo = Console.ReadKey(true);
+                    keyInfo = ReadKey(true);
 
                     dsr += keyInfo?.KeyChar;
 
@@ -271,10 +346,6 @@ public class Terminal : IConsole
             dsr = dsr.Substring(2, dsr.Length - 3);
 
             string[] result = dsr.Split(';');
-
-            /* Now that we have a DSR result with the cursor's row, move the
-             *  cursor back to the correct/expected column:*/
-            SetColumn(col + 1);
 
             /* If everything went well, return the row parsed from the DSR along
              *  with the tracked column. Increment the column by 1 because ANSI
@@ -292,8 +363,12 @@ public class Terminal : IConsole
         }
 
         public void SetPosition(int row, int col) 
-            => terminal.WriteLine($"{escapePrefix}{row};{col}H");
+            => Write($"{escapePrefix}{row};{col}H");
+
+        #endregion
 
     }
+
+    #endregion
 
 }
