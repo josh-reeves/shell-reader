@@ -24,6 +24,8 @@ public interface IShellControls
 
     public string CtrlA(string input);
 
+    public string End(string input);
+
     #endregion
     
 }

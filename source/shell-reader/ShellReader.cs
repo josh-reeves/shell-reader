@@ -7,15 +7,13 @@ namespace ShellReader;
 public class ShellReader : IShellReader
 {
     #region Fields
-    private string mask;
-
     private ITextCursor cursor => Terminal.Cursor;
 
     #endregion
 
-    public ShellReader(string prompt = "", IConsole? terminal = null, IDictionary<ConsoleKeyInfo, Func<string, string>>? keyMap = null)
+    public ShellReader(string prompt = "", string mask = "", IConsole? terminal = null, IDictionary<ConsoleKeyInfo, Func<string, string>>? keyMap = null)
     {
-        mask = string.Empty;
+        Mask = mask;
 
         Prompt = prompt;
         
@@ -38,6 +36,8 @@ public class ShellReader : IShellReader
     public bool IsPassword { get; private set; }
 
     public string Prompt { get; private set; }
+
+    public string Mask { get; private set; }
 
     public IConsole Terminal { get; set; }
 
@@ -89,13 +89,16 @@ public class ShellReader : IShellReader
     {
         string updated = original;
 
-        int textLength = IsPassword ? original.Length * mask.Length : original.Length;
+        int col = Terminal.Cursor.Column,
+            offset = Prompt.Length,
+            adjusted = col - offset,
+            textLength = IsPassword ? original.Length * Mask.Length : original.Length;
 
-        if (Terminal.Cursor.Column - Prompt.Length <= textLength)
+        if (adjusted <= textLength)
         {
-            int i = Terminal.Cursor.Column - Prompt.Length - 1;
+            int i = IsPassword ? (adjusted + (adjusted % Mask.Length)) / Mask.Length : adjusted - 1;
 
-            updated = original.Remove(i, insert.Length).Insert(i, insert);
+            updated = original.Insert(i, insert);
         
         }
         else
@@ -104,17 +107,18 @@ public class ShellReader : IShellReader
             
         }
 
-        insert = IsPassword ? mask : insert;
+        insert = IsPassword ? Mask : insert;
 
+        Terminal.Cursor.InsertSpace(insert.Length);
         Terminal.Write(insert);
     
         return updated;
 
     }
 
-    public string ReadPassword(string? prompt = null, string maskSeq = "")
+    public string ReadPassword(string? prompt = null, string mask = "")
     {
-        mask = maskSeq;
+        Mask = mask;
 
         return Read(prompt, true);
 
@@ -204,7 +208,7 @@ public class Terminal : IConsole
     #region Constructor(s)
     public Terminal()
     {        
-        cursor = new TextCursor();
+        cursor = new TextCursor(this);
 
     }
 
@@ -225,11 +229,14 @@ public class Terminal : IConsole
     [DllImport("libc", EntryPoint = "read")]
     private static extern IntPtr Read(int fd, out byte buf, UIntPtr count);
 
-    public ConsoleKeyInfo ReadKey(bool intercept = false) => cursor.ReadKey(intercept);
+    public ConsoleKeyInfo ReadKey(bool intercept = false) 
+        => Console.ReadKey(intercept);
 
-    public void Write(object? value = null) => cursor.Write(value);
+    public void Write(object? value = null) 
+        => Console.Write(value);
 
-    public void WriteLine(object? value = null) => cursor.WriteLine(value);
+    public void WriteLine(object? value = null) 
+        => Console.WriteLine(value);
 
     #endregion
 
@@ -262,10 +269,16 @@ public class Terminal : IConsole
         
         private string escapePrefix => $"{Escape}[";
 
+        private Terminal terminal;
         #endregion
 
         #region Constructor(s)
-        public TextCursor() {}
+        public TextCursor(IConsole parent)
+        {
+            terminal = (Terminal)parent;
+            
+        }
+
         #endregion
 
         #region Properties
@@ -276,31 +289,29 @@ public class Terminal : IConsole
         #endregion
 
         #region Methods
-        public ConsoleKeyInfo ReadKey(bool intercept = false) =>
-            Console.ReadKey(intercept);
-
-        public void Write(object? value = null) =>
-            Console.Write(value);
-
-        public void WriteLine(object? value = null) =>
-            Console.WriteLine(value);
-
-        public void MoveUp(int count = 1) => 
-            Write($"{escapePrefix}{count}A");
+        public void MoveUp(int count = 1) 
+            => terminal.Write($"{escapePrefix}{count}A");
         
-        public void MoveDown(int count = 1) => 
-            Write($"{escapePrefix}{count}B");
+        public void MoveDown(int count = 1) 
+            => terminal.Write($"{escapePrefix}{count}B");
 
-        public void MoveLeft(int count = 1) => 
-            Write($"{escapePrefix}{count}D");
+        public void MoveLeft(int count = 1) 
+            => terminal.Write($"{escapePrefix}{count}D");
         
-        public void MoveRight(int count = 1) => 
-            Write($"{escapePrefix}{count}C");
+        public void MoveRight(int count = 1) 
+            => terminal.Write($"{escapePrefix}{count}C");
         
-        public void SetColumn(int count) =>
-            Write($"{escapePrefix}{count}G");
+        public void SetColumn(int count) 
+            => terminal.Write($"{escapePrefix}{count}G");
+
+        public void InsertSpace(int count = 1)
+            => terminal.Write($"{escapePrefix}{count}@");
+
+        public void DeleteCharacter(int count = 1)
+            => terminal.Write($"{escapePrefix}{count}P");
         
-        public void ClearRemaining() => Write($"{escapePrefix}K");
+        public void ClearRemaining() 
+            => terminal.Write($"{escapePrefix}K");
 
         public (int row, int col) GetPosition()
         {
@@ -327,7 +338,7 @@ public class Terminal : IConsole
 
             DateTime timeout = DateTime.Now.AddMilliseconds(100);
 
-            Write($"{escapePrefix}6n");
+            terminal.Write($"{escapePrefix}6n");
 
             while (!dsr.EndsWith(terminator) && DateTime.Now < timeout)
             {
@@ -343,7 +354,7 @@ public class Terminal : IConsole
 
             }
 
-            // Restore original terminal mode:
+            // Restore original terminal mode as soon as possible:
             TCSetAttr(STDINFILE, TCSANOW, ref original);
 
             try
@@ -367,7 +378,7 @@ public class Terminal : IConsole
         }
 
         public void SetPosition(int row, int col) 
-            => Write($"{escapePrefix}{row};{col}H");
+            => terminal.Write($"{escapePrefix}{row};{col}H");
 
         #endregion
 

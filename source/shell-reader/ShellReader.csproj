@@ -9,7 +9,7 @@
     <AssemblyName>ShellReader</AssemblyName>
     <Title>ShellReader</Title>
     <PackageID>ShellReader</PackageID>
-    <PackageVersion>0.8.1-alpha.1</PackageVersion>
+    <PackageVersion>0.8.2-alpha.1</PackageVersion>
     <PackageTags>readline;gnu;console;shell;terminal;ansi;consolekeyinfo;command-history;prompt</PackageTags>
     <Authors>Joshua Reeves, Toni Solarin-Sodara, Tore Fuglestad, .NET Foundation and Contributors</Authors>
     <PackageProjectUrl>https://github.com/josh-reeves/shell-reader</PackageProjectUrl>

@@ -20,6 +20,10 @@ public interface ITextCursor
     
     public void SetColumn(int count);
 
+    public void InsertSpace(int count = 1);
+
+    public void DeleteCharacter(int count = 1);
+
     public void ClearRemaining();
 
     public void SetPosition(int row, int col);
