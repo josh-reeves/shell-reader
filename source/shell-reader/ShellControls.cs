@@ -41,47 +41,55 @@ public class ShellControls : IShellControls
 
     }
 
+    // This works, but really needs to be cleaned up:
     public string Backspace(string input)
     {
         if (input.Length <= 0)
         {
             return input;
-
+            
         }
 
         int col = Reader.Terminal.Cursor.Column,
-            offset = 1,
-            charIndex = col - 1 - Reader.Prompt.Length - 1;
+            cols = 1,
+            cursorOffset = 1,
+            adjusted = col - Reader.Prompt.Length,
+            charIndex = adjusted - cursorOffset - 1;
 
-        if (Reader.IsPassword && Reader.Mask.Length > 0)
-        {
-            offset = Reader.Mask.Length - ((col - 1 - Reader.Prompt.Length) % Reader.Mask.Length);
-
-            charIndex /= Reader.Mask.Length;
-
-        }
-        else if (Reader.IsPassword && input.Length > 0)
+        if (Reader.IsPassword && Reader.Mask.Length <= 0)
         {
             input = input[..(input.Length - 1)];
 
+            return input;
+
         }
 
-        string backspaces = "\b";
-
-        for (int i = 1; i < offset; i++)
+        if (charIndex < 0)
         {
-            backspaces += "\b";
-
+            return input;
+            
         }
 
-        if (charIndex >= 0)
+        if (Reader.IsPassword)
         {
-            input = input.Remove(charIndex, 1);
-            Reader.Terminal.Write(backspaces);
-            Reader.Terminal.Cursor.DeleteCharacter(offset);
-        
+            charIndex /= Reader.Mask.Length;
+            cols *= Reader.Mask.Length;
+
+            int mod = adjusted % Reader.Mask.Length;
+            cursorOffset = (mod != 0) ? mod : Reader.Mask.Length;
+            
         }
 
+        if (cursorOffset != 1)
+        {
+            Reader.Terminal.Cursor.SetColumn(col + Reader.Mask.Length - cursorOffset + 1);
+
+        }
+
+        input = input.Remove(charIndex, 1);
+        Reader.Terminal.Write(new string('\b', cols));
+        Reader.Terminal.Cursor.DeleteCharacter(cols);
+    
         return input;
 
     }

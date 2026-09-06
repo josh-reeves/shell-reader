@@ -29,10 +29,10 @@ class Program
         reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.A, false, false, true), controls.CtrlA);
         reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.End, false, false, false), controls.End);
 
-        reader.Terminal.WriteLine(welcomeMsg);
 
         while(!string.Equals(input, exitStr))
         {
+            reader.Terminal.WriteLine(welcomeMsg);
             input = reader.Read();
 
             if (string.Equals(input, passwordStr))

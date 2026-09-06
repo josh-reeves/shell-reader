@@ -87,18 +87,15 @@ public class ShellReader : IShellReader
 
     private string UpdateTextAtCursor(string original, string insert)
     {
-        string updated = original;
-
         int col = Terminal.Cursor.Column,
-            offset = Prompt.Length,
-            adjusted = col - offset,
-            textLength = IsPassword ? original.Length * Mask.Length : original.Length;
+            adjusted = col - Prompt.Length,
+            textLength = (IsPassword && Mask.Length <= 0) ? 0 : original.Length;
+        
+        string updated = original;
 
         if (adjusted <= textLength)
         {
-            int i = IsPassword ? (adjusted + (adjusted % Mask.Length)) / Mask.Length : adjusted - 1;
-
-            updated = original.Insert(i, insert);
+            updated = original.Insert(adjusted - 1, insert);
         
         }
         else
@@ -266,7 +263,7 @@ public class Terminal : IConsole
     {
         #region Fields
         private const char Escape = '\u001B';
-        
+
         private string escapePrefix => $"{Escape}[";
 
         private Terminal terminal;
