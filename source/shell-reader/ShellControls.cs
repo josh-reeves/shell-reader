@@ -50,12 +50,6 @@ public class ShellControls : IShellControls
             
         }
 
-        int col = Reader.Terminal.Cursor.Column,
-            cols = 1,
-            cursorOffset = 1,
-            adjusted = col - Reader.Prompt.Length,
-            charIndex = adjusted - cursorOffset - 1;
-
         if (Reader.IsPassword && Reader.Mask.Length <= 0)
         {
             input = input[..(input.Length - 1)];
@@ -63,6 +57,12 @@ public class ShellControls : IShellControls
             return input;
 
         }
+
+        int col = Reader.Terminal.Cursor.Column,
+            cols = 1,
+            cursorOffset = 1,
+            adjusted = col - Reader.Prompt.Length,
+            charIndex = adjusted - cursorOffset - 1;
 
         if (charIndex < 0)
         {
@@ -75,21 +75,14 @@ public class ShellControls : IShellControls
             charIndex /= Reader.Mask.Length;
             cols *= Reader.Mask.Length;
 
-            int mod = adjusted % Reader.Mask.Length;
-            cursorOffset = (mod != 0) ? mod : Reader.Mask.Length;
+            cursorOffset = adjusted % Reader.Mask.Length;
             
         }
 
-        if (cursorOffset != 1)
-        {
-            Reader.Terminal.Cursor.SetColumn(col + Reader.Mask.Length - cursorOffset + 1);
-
-        }
-
         input = input.Remove(charIndex, 1);
-        Reader.Terminal.Write(new string('\b', cols));
+        Reader.Terminal.Cursor.SetColumn(col - cursorOffset + 1 - cols);
         Reader.Terminal.Cursor.DeleteCharacter(cols);
-    
+
         return input;
 
     }
