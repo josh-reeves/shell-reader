@@ -286,6 +286,68 @@ public class Terminal : IConsole
         #endregion
 
         #region Methods
+        private (int row, int col) GetPositionLinux()
+        {
+            TCGetAttr(STDINFILE, out Termios original);
+
+            try
+            {
+                Termios raw = original;
+                
+                /* Ensure cannoncial and echo flags are disabled by inverting them, 
+                *  ANDing them against the original values, and assigning the 
+                *  result:*/
+                raw.c_lflag &= ~(ICANON | ECHO);
+
+                TCSetAttr(STDINFILE, TCSANOW, ref raw);
+
+                while (Console.KeyAvailable) { Console.ReadKey(true); }
+
+                char terminator = 'R';       
+                string dsr = string.Empty;
+
+                DateTime timeout = DateTime.Now.AddMilliseconds(100);
+
+                terminal.Write($"{escapePrefix}6n");
+
+                while (!dsr.EndsWith(terminator) && DateTime.Now < timeout)
+                {
+                    long bytesRead = Read(STDINFILE, out byte b, 1);
+                    
+                    if (bytesRead <= 0)
+                    {
+                        continue;
+
+                    }
+
+                    dsr += (char)b;
+
+                }
+
+                dsr = dsr.Substring(2, dsr.Length - 3);
+
+                string[] result = dsr.Split(';');
+
+                int row = int.Parse(result[0]), 
+                    col = int.Parse(result[1]);
+                    
+                return (row, col);
+
+            }
+            catch
+            {                
+                return (Console.CursorTop + 1, Console.CursorLeft + 1);
+
+            }
+            finally
+            {
+                // Restore original terminal mode:
+                TCSetAttr(STDINFILE, TCSANOW, ref original);
+                
+            }
+
+        }
+
         public void MoveUp(int count = 1) 
             => terminal.Write($"{escapePrefix}{count}A");
         
@@ -312,65 +374,13 @@ public class Terminal : IConsole
 
         public (int row, int col) GetPosition()
         {
-            if (OperatingSystem.IsWindows())
+            if (OperatingSystem.IsLinux())
             {
-                return (Console.CursorTop + 1, Console.CursorLeft + 1);
+                return GetPositionLinux();
 
             }
 
-            TCGetAttr(STDINFILE, out Termios original);
-            Termios raw = original;
-            
-            /* Ensure cannoncial and echo flags are disabled by inverting them, 
-             *  ANDing them against the original values, and assigning the 
-             *  result:*/
-            raw.c_lflag &= ~(ICANON | ECHO);
-
-            TCSetAttr(STDINFILE, TCSANOW, ref raw);
-
-            while (Console.KeyAvailable) { Console.ReadKey(true); }
-
-            char terminator = 'R';       
-            string dsr = string.Empty;
-
-            DateTime timeout = DateTime.Now.AddMilliseconds(100);
-
-            terminal.Write($"{escapePrefix}6n");
-
-            while (!dsr.EndsWith(terminator) && DateTime.Now < timeout)
-            {
-                long bytesRead = Read(STDINFILE, out byte b, 1);
-                
-                if (bytesRead <= 0)
-                {
-                    continue;
-
-                }
-
-                dsr += (char)b;
-
-            }
-
-            // Restore original terminal mode as soon as possible:
-            TCSetAttr(STDINFILE, TCSANOW, ref original);
-
-            try
-            {
-                dsr = dsr.Substring(2, dsr.Length - 3);
-
-                string[] result = dsr.Split(';');
-
-                int row = int.Parse(result[0]), 
-                    col = int.Parse(result[1]);
-                    
-                return (row, col);
-
-            }
-            catch
-            {
-                return (Console.CursorTop + 1, Console.CursorLeft + 1);
-
-            }
+            return (Console.CursorTop + 1, Console.CursorLeft + 1);
 
         }
 
