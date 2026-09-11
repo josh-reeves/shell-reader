@@ -226,13 +226,13 @@ public class Terminal : IConsole
     [DllImport("libc", EntryPoint = "read")]
     private static extern IntPtr Read(int fd, out byte buf, UIntPtr count);
 
-    public ConsoleKeyInfo ReadKey(bool intercept = false) 
+    public virtual ConsoleKeyInfo ReadKey(bool intercept = false) 
         => Console.ReadKey(intercept);
 
-    public void Write(object? value = null) 
+    public virtual void Write(object? value = null) 
         => Console.Write(value);
 
-    public void WriteLine(object? value = null) 
+    public virtual void WriteLine(object? value = null) 
         => Console.WriteLine(value);
 
     #endregion

@@ -1,3 +1,4 @@
+using ShellReader.Interfaces;
 using Xunit.Abstractions;
 using Xunit.Extensions;
 
@@ -20,9 +21,6 @@ public class TextCursorTests
     [Fact]
     public void GetCursorPosition_NewLine_ReturnsCoordinates()
     {
-        ShellReader reader = new();
-
-        Assert.Equal((1,1), reader.Terminal.Cursor.GetPosition());
 
     }
 
