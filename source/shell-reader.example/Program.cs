@@ -27,7 +27,6 @@ class Program
         reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.A, false, false, true), controls.CtrlA);
         reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.End, false, false, false), controls.End);
 
-
         while(!string.Equals(input, exitStr))
         {
             reader.Terminal.WriteLine(welcomeMsg);
