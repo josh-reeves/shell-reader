@@ -18,7 +18,7 @@ public class ShellReaderTests
 
         VirtualConsole console = new()
         {
-            InputStream = input 
+            InputStream = input
 
         };
 
