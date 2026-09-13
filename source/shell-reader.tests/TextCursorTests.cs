@@ -1,6 +1,4 @@
-using ShellReader.Interfaces;
 using Xunit.Abstractions;
-using Xunit.Extensions;
 
 namespace ShellReader.Tests;
 

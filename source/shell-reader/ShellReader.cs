@@ -230,10 +230,10 @@ public class Terminal : IConsole
         => Console.ReadKey(intercept);
 
     public virtual void Write(object? value = null) 
-        => Console.Write(value);
+        => cursor.Write(value?.ToString() ?? "");
 
-    public virtual void WriteLine(object? value = null) 
-        => Console.WriteLine(value);
+    public virtual void WriteLine(object? value = null)
+        => cursor.WriteLine(value?.ToString() ?? "");
 
     #endregion
 
@@ -264,21 +264,28 @@ public class Terminal : IConsole
         #region Fields
         private const char Escape = '\u001B';
 
+        private (int row, int col) virtualCursor;
         private string escapePrefix => $"{Escape}[";
 
         private Terminal terminal;
+
         #endregion
 
         #region Constructor(s)
         public TextCursor(IConsole parent)
         {
             terminal = (Terminal)parent;
+            virtualCursor = (1, 1);
+
+            IsVirtual = Console.IsInputRedirected;
             
         }
 
         #endregion
 
         #region Properties
+        public bool IsVirtual { get; set; }
+
         public int Column { get => GetPosition().col; }
 
         public int Row { get => GetPosition().row; }
@@ -336,7 +343,7 @@ public class Terminal : IConsole
             }
             catch
             {                
-                return (Console.CursorTop + 1, Console.CursorLeft + 1);
+                return (virtualCursor.row, virtualCursor.col);
 
             }
             finally
@@ -348,32 +355,14 @@ public class Terminal : IConsole
 
         }
 
-        public void MoveUp(int count = 1) 
-            => terminal.Write($"{escapePrefix}{count}A");
-        
-        public void MoveDown(int count = 1) 
-            => terminal.Write($"{escapePrefix}{count}B");
-
-        public void MoveLeft(int count = 1) 
-            => terminal.Write($"{escapePrefix}{count}D");
-        
-        public void MoveRight(int count = 1) 
-            => terminal.Write($"{escapePrefix}{count}C");
-        
-        public void SetColumn(int count) 
-            => terminal.Write($"{escapePrefix}{count}G");
-
-        public void InsertSpace(int count = 1)
-            => terminal.Write($"{escapePrefix}{count}@");
-
-        public void DeleteCharacter(int count = 1)
-            => terminal.Write($"{escapePrefix}{count}P");
-        
-        public void ClearRemaining() 
-            => terminal.Write($"{escapePrefix}K");
-
         public (int row, int col) GetPosition()
         {
+            if (IsVirtual)
+            {
+                return (virtualCursor.row, virtualCursor.col);
+                
+            }
+
             if (OperatingSystem.IsLinux())
             {
                 return GetPositionLinux();
@@ -384,8 +373,85 @@ public class Terminal : IConsole
 
         }
 
+        public void MoveUp(int count = 1) 
+        {
+            terminal.Write($"{escapePrefix}{count}A");
+        
+            virtualCursor.col--;
+
+        }
+
+        public void MoveDown(int count = 1) 
+        {
+            terminal.Write($"{escapePrefix}{count}B");
+
+            virtualCursor.col++;
+            
+        }
+
+        public void MoveLeft(int count = 1)
+        {
+            terminal.Write($"{escapePrefix}{count}D");
+
+            virtualCursor.col--;
+
+        }
+            
+        
+        public void MoveRight(int count = 1) 
+        {
+            terminal.Write($"{escapePrefix}{count}C");
+
+            virtualCursor.col++;
+
+        }
+        
+        public void SetColumn(int col) 
+        {
+            terminal.Write($"{escapePrefix}{col}G");
+
+            virtualCursor.col = col;
+
+        }
+
+        public void InsertSpace(int count = 1)
+            => terminal.Write($"{escapePrefix}{count}@");
+
+        public void DeleteCharacter(int count = 1)
+            => terminal.Write($"{escapePrefix}{count}P");
+        
+        public void ClearRemaining() 
+            => terminal.Write($"{escapePrefix}K");
+
         public void SetPosition(int row, int col) 
-            => terminal.Write($"{escapePrefix}{row};{col}H");
+        {
+            terminal.Write($"{escapePrefix}{row};{col}H");
+
+            virtualCursor.row = row;
+            virtualCursor.col = col;
+
+        }
+
+        public void Write(string str)
+        {
+            Console.Write(str);
+
+            if (!str.StartsWith(escapePrefix))
+            {
+                virtualCursor.col += str.Length;
+                
+            }
+
+        }
+
+        public void WriteLine(string str)
+        {
+            Console.WriteLine(str);
+
+            virtualCursor.row++;
+            virtualCursor.col = 1;
+
+        }
 
         #endregion
 

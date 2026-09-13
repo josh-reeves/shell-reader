@@ -3,6 +3,8 @@ namespace ShellReader.Interfaces;
 public interface ITextCursor
 {
     #region Properites
+    public bool IsVirtual { get; set; }
+
     public int Column { get; }
 
     public int Row { get; }

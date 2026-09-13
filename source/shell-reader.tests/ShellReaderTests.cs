@@ -1,21 +1,20 @@
-﻿namespace ShellReader.Tests;
+﻿using ShellReader.Tests.Data;
+
+namespace ShellReader.Tests;
 
 public class ShellReaderTests
 {
-    [Fact]
-    public async Task Read_NoPassword_DisplaysAndReturnsInput()
-    {
-        Queue<ConsoleKeyInfo> input = new(
-            [
-                new('t', ConsoleKey.T, false, false, false),
-                new('e', ConsoleKey.E, false, false, false),
-                new('s', ConsoleKey.S, false, false, false),
-                new('t', ConsoleKey.T, false, false, false),
-                new('\n', ConsoleKey.Enter, false, false, false)
-      
-            ]
+    #region Constructor(s)
+    public static TheoryData<ConsoleKeyInfo[], string> TestData = new() {};
 
-        );
+    #endregion
+
+    #region Methods
+    [Theory]
+    [ClassData(typeof(ShellReaderTestData))]
+    public void Read_NoPassword_DisplaysAndReturnsInput(ConsoleKeyInfo[] keyStrokes, string test)
+    {
+        Queue<ConsoleKeyInfo> input = new(keyStrokes);
 
         VirtualConsole console = new()
         {
@@ -28,12 +27,15 @@ public class ShellReaderTests
 
         reader.KeyMap.Add(new('\0', ConsoleKey.Enter, false, false, false), controls.Enter);
 
-        string output = reader.Read();
+        string compare = reader.Read();
 
-        Assert.Equal("test", output);
+        Assert.Equal(test, compare);
 
     }
 
+    #endregion
+
+    #region Classes & Structs
     private class VirtualConsole : Terminal
     {
         public VirtualConsole()
@@ -58,4 +60,5 @@ public class ShellReaderTests
         
     }
 
+    #endregion
 }
