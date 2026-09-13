@@ -1,5 +1,5 @@
 <Solution>
-  <Project Path="shell-reader-example/ShellReaderExample.csproj" />
+  <Project Path="shell-reader.example/ShellReader.Example.csproj" />
   <Project Path="shell-reader.tests/ShellReader.Tests.csproj" />
   <Project Path="shell-reader/ShellReader.csproj" />
 </Solution>

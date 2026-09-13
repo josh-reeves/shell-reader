@@ -1,18 +1,16 @@
-﻿namespace ShellReaderExample;
-
-using ShellReader;
+﻿namespace ShellReader.Example;
 
 class Program
 {
     static void Main(string[] args)
     {
         string input = string.Empty,
-               exitStr = "exit",
-               passwordStr = "pass",
-               programDir = AppContext.BaseDirectory,
-               mask = string.Empty,
-               passMsg = $"Enter a sequence of any length to use as a mask. Current mask: {mask}",
-               welcomeMsg = "ShellReader Example. Type 'pass' to enter password mode. Type 'exit' to quit:";
+            exitStr = "exit",
+            passwordStr = "pass",
+            programDir = AppContext.BaseDirectory,
+            mask = string.Empty,
+            passMsg = $"Enter a sequence of any length to use as a mask. Current mask: {mask}",
+            welcomeMsg = "ShellReader Example. Type 'pass' to enter password mode. Type 'exit' to quit:";
 
         ShellReader reader = new(
             prompt: "$ ",
