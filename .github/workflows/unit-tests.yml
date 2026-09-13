@@ -24,12 +24,12 @@ jobs:
 
       # Restore Dependencies
       - name: Restore Dependencies
-        run: dotnet restore
+        run: dotnet restore /home/runner/work/shell-reader/shell-reader/source/ShellReader.slnx
 
       # Build Solution
       - name: Build Solution
-        run: dotnet build --no-restore
+        run: dotnet build /home/runner/work/shell-reader/shell-reader/source/ShellReader.slnx --no-restore
 
       # Run Unit Tests
       - name: Run Unit Tests
-        run: dotnet test --no-build --verbosity normal
+        run: dotnet test /home/runner/work/shell-reader/shell-reader/source/ShellReader.slnx --no-build --verbosity normal
