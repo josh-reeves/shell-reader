@@ -5,20 +5,30 @@ namespace ShellReader.Tests;
 public class TextCursorTests
 {
     #region Fields
-    ITestOutputHelper outputHelper;
+    ShellReader reader;
 
     #endregion
 
-    public TextCursorTests(ITestOutputHelper testOutputHelper)
+    #region Constructor(s)
+    public TextCursorTests()
     {
-        outputHelper = testOutputHelper;
+        reader = new();
 
     }
 
+    #endregion
+
     #region Methods
-    [Fact]
-    public void GetCursorPosition_NewLine_ReturnsCoordinates()
+    [Theory]
+    [InlineData("", 1, 1)]
+    [InlineData("test", 1, 5)]
+    [InlineData("with\nnewlines", 2, 9)]
+    [InlineData("with\nmore\nnewlines\n", 4, 1)]
+    public void GetCursorPosition_AnyLine_ReturnsCoordinates(string input, int testRow, int testCol)
     {
+        reader.Terminal.Write(input);
+
+        Assert.Equal((testRow, testCol), reader.Terminal.Cursor.GetPosition());
 
     }
 

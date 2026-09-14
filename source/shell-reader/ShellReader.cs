@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using System.Text;
 using ShellReader.Interfaces;
 
 namespace ShellReader;
@@ -115,9 +114,15 @@ public class ShellReader : IShellReader
 
     public string ReadPassword(string? prompt = null, string mask = "")
     {
+        string temp = Mask;
+
         Mask = mask;
 
-        return Read(prompt, true);
+        string input = Read(prompt, true);
+
+        Mask = temp;
+            
+        return input;
 
     }
 
@@ -262,7 +267,8 @@ public class Terminal : IConsole
     private class TextCursor : ITextCursor
     {
         #region Fields
-        private const char Escape = '\u001B';
+        private const char Newline = '\n',
+                           Escape = '\u001B';
 
         private (int row, int col) virtualCursor;
         private string escapePrefix => $"{Escape}[";
@@ -439,7 +445,14 @@ public class Terminal : IConsole
             if (!str.StartsWith(escapePrefix))
             {
                 virtualCursor.col += str.Length;
-                
+
+            }
+
+            if (str.Contains(Newline))
+            {
+                virtualCursor.row += str.Count((c) => c == Newline);
+                virtualCursor.col = str.Length - str.LastIndexOf(Newline);
+
             }
 
         }
@@ -448,7 +461,7 @@ public class Terminal : IConsole
         {
             Console.WriteLine(str);
 
-            virtualCursor.row++;
+            virtualCursor.row += str.Count((c) => c == Newline) + 1;
             virtualCursor.col = 1;
 
         }
