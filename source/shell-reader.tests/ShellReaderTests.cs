@@ -33,25 +33,23 @@ public class ShellReaderTests
 
     [Theory]
     [ClassData(typeof(ShellReaderTestData))]
-    public void ReadPassword_EmptyMask_HidesAndReturnsInput(ConsoleKeyInfo[] keyStrokes, string test)
+    public void Read_Password_HidesAndReturnsInput(ConsoleKeyInfo[] keyStrokes, string test)
     {
-        ((VirtualConsole)reader.Terminal).InputStream = new(keyStrokes);
+        string[] masks = ["*", "pass", "123", "-_-10<>/\\?.';,[]{}|`~:"];  
 
-        string compare = reader.ReadPassword();
+        foreach(string mask in masks)
+        {
+            ((VirtualConsole)reader.Terminal).InputStream = new(keyStrokes);
+            
+            string compare = reader.ReadPassword(mask: mask);
 
-        Assert.Equal(test, compare);
+            if (compare != test)
+            {
+                Assert.Fail();
 
-    }
+            }
 
-    [Theory]
-    [ClassData(typeof(ShellReaderTestData))]
-    public void ReadPassword_SingleCharMask_HidesAndReturnsInput(ConsoleKeyInfo[] keyStrokes, string test)
-    {
-        ((VirtualConsole)reader.Terminal).InputStream = new(keyStrokes);
-
-        string compare = reader.ReadPassword("*");
-
-        Assert.Equal(test, compare);
+        }
 
     }
 
