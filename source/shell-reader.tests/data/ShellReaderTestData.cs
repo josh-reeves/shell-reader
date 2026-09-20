@@ -8,6 +8,11 @@ public class ShellReaderTestData : TheoryData<ConsoleKeyInfo[], string>
     {
         Add(      
         [
+            new('\n', ConsoleKey.Enter, false, false, false)
+        
+        ], "");
+        Add(      
+        [
             new('t', ConsoleKey.T, false, false, false), 
             new('e', ConsoleKey.E, false, false, false),
             new('s', ConsoleKey.S, false, false, false),
