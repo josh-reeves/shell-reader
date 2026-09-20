@@ -21,7 +21,7 @@ public class ShellReaderTests
     #region Methods
     [Theory]
     [ClassData(typeof(ShellReaderTestData))]
-    public void Read_NoPassword_DisplaysAndReturnsInput(ConsoleKeyInfo[] keyStrokes, string test)
+    public void Read_NoPasswordNoPrompt_DisplayAndReturnInput(ConsoleKeyInfo[] keyStrokes, string test)
     {
        ((VirtualConsole)reader.Terminal).InputStream = new(keyStrokes);
 
@@ -33,9 +33,65 @@ public class ShellReaderTests
 
     [Theory]
     [ClassData(typeof(ShellReaderTestData))]
-    public void Read_Password_HidesAndReturnsInput(ConsoleKeyInfo[] keyStrokes, string test)
+    public void Read_NoPasswordAnyPrompt_DisplayAndReturnInput(ConsoleKeyInfo[] keyStrokes, string test)
     {
-        string[] masks = ["*", "pass", "123", "-_-10<>/\\?.';,[]{}|`~:"];  
+        string[] prompts = ["$ ", "# ", ": ", "% ", "Enter Command: "];
+
+        foreach(string prompt in prompts)
+        {
+            ((VirtualConsole)reader.Terminal).InputStream = new(keyStrokes);
+            
+            string compare = reader.Read(prompt: prompt);
+
+            if (compare != test)
+            {
+                Assert.Fail();
+
+            }
+
+        }
+
+    }
+
+    [Theory]
+    [ClassData(typeof(ShellReaderTestData))]
+    public void Read_AsPasswordNoPrompt_HideAndReturnInput(ConsoleKeyInfo[] keyStrokes, string test)
+    {
+        ((VirtualConsole)reader.Terminal).InputStream = new(keyStrokes);
+
+        string compare = reader.Read(isPassword: true);
+
+        Assert.Equal(test, compare);
+
+    }
+
+    [Theory]
+    [ClassData(typeof(ShellReaderTestData))]
+    public void Read_AsPasswordAnyPrompt_HideAndReturnInput(ConsoleKeyInfo[] keyStrokes, string test)
+    {
+        string[] prompts = ["$ ", "# ", ": ", "% ", "Enter Command: "];
+
+        foreach(string prompt in prompts)
+        {
+            ((VirtualConsole)reader.Terminal).InputStream = new(keyStrokes);
+            
+            string compare = reader.Read(prompt: prompt, isPassword: true);
+
+            if (compare != test)
+            {
+                Assert.Fail();
+
+            }
+
+        }
+
+    }
+
+    [Theory]
+    [ClassData(typeof(ShellReaderTestData))]
+    public void ReadPassword_AnyMaskNoPrompt_PromptHideAndReturnInput(ConsoleKeyInfo[] keyStrokes, string test)
+    {
+        string[] masks = ["*", "pass", "123", "-_-10<>/\\?.';,[]{}|`~:", ""];  
 
         foreach(string mask in masks)
         {
@@ -46,6 +102,33 @@ public class ShellReaderTests
             if (compare != test)
             {
                 Assert.Fail();
+
+            }
+
+        }
+
+    }
+
+    [Theory]
+    [ClassData(typeof(ShellReaderTestData))]
+    public void ReadPassword_AnyMaskAnyPrompt_PromptHideAndReturnInput(ConsoleKeyInfo[] keyStrokes, string test)
+    {
+        string[] prompts = ["$ ", "# ", ": ", "% ", "Enter Command: "];
+        string[] masks = ["*", "pass", "123", "-_-10<>/\\?.';,[]{}|`~:", ""];  
+
+        foreach(string prompt in prompts)
+        {
+            foreach(string mask in masks)
+            {
+                ((VirtualConsole)reader.Terminal).InputStream = new(keyStrokes);
+                
+                string compare = reader.ReadPassword(prompt: prompt, mask: mask);
+
+                if (compare != test)
+                {
+                    Assert.Fail();
+
+                }
 
             }
 
