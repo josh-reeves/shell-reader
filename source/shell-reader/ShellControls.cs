@@ -87,7 +87,7 @@ public class ShellControls : IShellControls
 
     }
 
-    public string UpArrow(string input)
+    public string Up(string input)
     {
         if (Reader.IsPassword)
         {
@@ -110,7 +110,10 @@ public class ShellControls : IShellControls
 
     }
 
-    public string DownArrow(string input)
+    public string CtrlP(string input)
+        => Up(input);
+
+    public string Down(string input)
     {
         if (Reader.IsPassword)
         {
@@ -133,7 +136,10 @@ public class ShellControls : IShellControls
         
     }
 
-    public string LeftArrow(string input)
+    public string CtrlN(string input)
+        => Down(input);
+
+    public string Left(string input)
     {
         int col = Reader.Terminal.Cursor.Column;
 
@@ -147,7 +153,10 @@ public class ShellControls : IShellControls
         
     }
 
-    public string RightArrow(string input)
+    public string CtrlB(string input)
+        => Left(input);
+
+    public string Right(string input)
     {
         int col = Reader.Terminal.Cursor.Column,
             textLength = Reader.IsPassword ? input.Length * Reader.Mask.Length : input.Length;
@@ -161,6 +170,9 @@ public class ShellControls : IShellControls
         return input;
         
     }
+
+    public string CtrlF(string input)
+        => Right(input);
 
     public string Home(string input)
     {                
@@ -182,6 +194,9 @@ public class ShellControls : IShellControls
         return input;
 
     }
+
+    public string CtrlE(string input)
+        => End(input);
 
     #endregion
 
