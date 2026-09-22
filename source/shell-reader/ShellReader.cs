@@ -10,13 +10,13 @@ public class ShellReader : IShellReader
 
     #endregion
 
-    public ShellReader(string prompt = "", string mask = "", IConsole? terminal = null, IDictionary<ConsoleKeyInfo, Func<string, string>>? keyMap = null)
+    public ShellReader(string prompt = "", string mask = "", IConsole? terminal = null, IDictionary<ConsoleKeyInfo, Func<string, string?>>? keyMap = null)
     {
         Mask = mask;
 
         Prompt = prompt;
         
-        KeyMap = keyMap ?? new Dictionary<ConsoleKeyInfo, Func<string, string>>();
+        KeyMap = keyMap ?? new Dictionary<ConsoleKeyInfo, Func<string, string?>>();
 
         terminal ??= new Terminal();
         
@@ -40,16 +40,16 @@ public class ShellReader : IShellReader
 
     public IConsole Terminal { get; set; }
 
-    public IDictionary<ConsoleKeyInfo, Func<string, string>> KeyMap { get; }
+    public IDictionary<ConsoleKeyInfo, Func<string, string?>> KeyMap { get; }
 
     #endregion
 
     #region Methods
-    private Func<string, string>? RetrieveKeyMap(IDictionary<ConsoleKeyInfo, Func<string, string>> map, ConsoleKeyInfo keyPress)
+    private Func<string, string?>? RetrieveKeyMap(IDictionary<ConsoleKeyInfo, Func<string, string?>> map, ConsoleKeyInfo keyPress)
     {
         ConsoleKeyInfo temp = new(keyPress.KeyChar, keyPress.Key, false, false, false);
 
-        Func<string, string>? result = null;
+        Func<string, string?>? result = null;
 
         foreach (ConsoleKeyInfo compare in map.Keys)
         {
@@ -112,13 +112,13 @@ public class ShellReader : IShellReader
 
     }
 
-    public string ReadPassword(string? prompt = null, string mask = "")
+    public string? ReadPassword(string? prompt = null, string mask = "")
     {
         string temp = Mask;
 
         Mask = mask;
 
-        string input = Read(prompt, true);
+        string? input = Read(prompt, true);
 
         Mask = temp;
             
@@ -126,10 +126,10 @@ public class ShellReader : IShellReader
 
     }
 
-    public string Read(string? prompt = null, bool isPassword = false)
+    public string? Read(string? prompt = null, bool isPassword = false)
     {
-        string input = string.Empty,
-               temp = Prompt;
+        string? input = string.Empty;
+        string       temp = Prompt;
 
         IsPassword = isPassword;
 
@@ -149,17 +149,17 @@ public class ShellReader : IShellReader
 
             BroadcastInput(keyPress);
 
-            Func<string, string>? func = RetrieveKeyMap(KeyMap, keyPress);
+            Func<string, string?>? func = RetrieveKeyMap(KeyMap, keyPress);
 
             if (func is not null)
             {
-                input = func(input);
+                input = func(input ?? string.Empty);
 
                 continue;
 
             }
 
-            if (!char.IsControl(keyPress.KeyChar))
+            if (!char.IsControl(keyPress.KeyChar) && input is not null)
             {
                 input = UpdateTextAtCursor(input, keyPress.KeyChar.ToString());
 
@@ -473,5 +473,3 @@ public class Terminal : IConsole
     #endregion
 
 }
-
-
