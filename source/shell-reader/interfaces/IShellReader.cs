@@ -13,7 +13,7 @@ public interface IShellReader
 
     public IConsole Terminal { get; set; }
 
-    public IDictionary<ConsoleKeyInfo, Func<string, string>> KeyMap { get; }
+    public IDictionary<ConsoleKeyInfo, Func<string, string?>> KeyMap { get; }
     
     #endregion
 
@@ -23,9 +23,9 @@ public interface IShellReader
     #endregion
     
     #region Methods
-    public string ReadPassword(string? prompt = null, string mask = "");
+    public string? ReadPassword(string? prompt = null, string mask = "");
 
-    public string Read(string? prompt = null, bool isPassword = false);
+    public string? Read(string? prompt = null, bool isPassword = false);
 
     public void ClearLine(int startPos = 0);
 

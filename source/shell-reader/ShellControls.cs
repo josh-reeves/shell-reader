@@ -24,7 +24,7 @@ public class ShellControls : IShellControls
     #endregion
 
     #region Methods
-    public string Enter(string input)
+    public string? Enter(string? input)
     {
         if (!string.IsNullOrWhiteSpace(input) && !Reader.IsPassword)
         {
@@ -86,8 +86,7 @@ public class ShellControls : IShellControls
         return input;
 
     }
-
-    public string UpArrow(string input)
+    public string CtrlP(string input)
     {
         if (Reader.IsPassword)
         {
@@ -110,7 +109,10 @@ public class ShellControls : IShellControls
 
     }
 
-    public string DownArrow(string input)
+    public string UpArrow(string input)
+        => CtrlP(input);
+
+    public string CtrlN(string input)
     {
         if (Reader.IsPassword)
         {
@@ -133,7 +135,10 @@ public class ShellControls : IShellControls
         
     }
 
-    public string LeftArrow(string input)
+    public string DownArrow(string input)
+        => CtrlN(input);
+
+    public string CtrlB(string input)
     {
         int col = Reader.Terminal.Cursor.Column;
 
@@ -147,7 +152,10 @@ public class ShellControls : IShellControls
         
     }
 
-    public string RightArrow(string input)
+    public string LeftArrow(string input)
+        => CtrlB(input);
+
+    public string CtrlF(string input)
     {
         int col = Reader.Terminal.Cursor.Column,
             textLength = Reader.IsPassword ? input.Length * Reader.Mask.Length : input.Length;
@@ -162,7 +170,10 @@ public class ShellControls : IShellControls
         
     }
 
-    public string Home(string input)
+    public string RightArrow(string input)
+        => CtrlF(input);
+
+    public string CtrlA(string input)
     {                
         Reader.Terminal.Cursor.SetColumn(Reader.Prompt.Length + 1);
         
@@ -170,10 +181,10 @@ public class ShellControls : IShellControls
 
     }
 
-    public string CtrlA(string input)
-        => Home(input);
+    public string Home(string input)
+        => CtrlA(input);
 
-    public string End(string input)
+    public string CtrlE(string input)
     {
         int textLength = Reader.IsPassword ? input.Length * Reader.Mask.Length : input.Length;
 
@@ -182,6 +193,12 @@ public class ShellControls : IShellControls
         return input;
 
     }
+
+    public string End(string input)
+        => CtrlE(input);
+
+    public string? CtrlC(string? input)
+        => Enter(null);
 
     #endregion
 

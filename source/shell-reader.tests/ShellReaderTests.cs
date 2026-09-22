@@ -12,7 +12,16 @@ public class ShellReaderTests
         reader = new(terminal: new VirtualConsole());
 
         ShellControls controls = new(reader);
-        reader.KeyMap.Add(new('\0', ConsoleKey.Enter, false, false, false), controls.Enter);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.Enter, false, false, false), controls.Enter);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.Backspace, false, false, false), controls.Backspace);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.UpArrow, false, false, false), controls.UpArrow);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.DownArrow, false, false, false), controls.DownArrow);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.LeftArrow, false, false, false), controls.LeftArrow);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.RightArrow, false, false, false), controls.RightArrow);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.Home, false, false, false), controls.Home);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.A, false, false, true), controls.CtrlA);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.End, false, false, false), controls.End);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.C, false, false, true), controls.CtrlC);
 
     }
 
@@ -25,7 +34,7 @@ public class ShellReaderTests
     {
        ((VirtualConsole)reader.Terminal).InputStream = new(keyStrokes);
 
-        string compare = reader.Read();
+        string compare = reader.Read() ?? string.Empty;
 
         Assert.Equal(test, compare);
 
@@ -41,7 +50,7 @@ public class ShellReaderTests
         {
             ((VirtualConsole)reader.Terminal).InputStream = new(keyStrokes);
             
-            string compare = reader.Read(prompt: prompt);
+            string compare = reader.Read(prompt: prompt) ?? string.Empty;
 
             if (compare != test)
             {
@@ -59,7 +68,7 @@ public class ShellReaderTests
     {
         ((VirtualConsole)reader.Terminal).InputStream = new(keyStrokes);
 
-        string compare = reader.Read(isPassword: true);
+        string compare = reader.Read(isPassword: true) ?? string.Empty;
 
         Assert.Equal(test, compare);
 
@@ -75,7 +84,7 @@ public class ShellReaderTests
         {
             ((VirtualConsole)reader.Terminal).InputStream = new(keyStrokes);
             
-            string compare = reader.Read(prompt: prompt, isPassword: true);
+            string compare = reader.Read(prompt: prompt, isPassword: true) ?? string.Empty;
 
             if (compare != test)
             {
@@ -97,7 +106,7 @@ public class ShellReaderTests
         {
             ((VirtualConsole)reader.Terminal).InputStream = new(keyStrokes);
             
-            string compare = reader.ReadPassword(mask: mask);
+            string compare = reader.ReadPassword(mask: mask) ?? string.Empty;
 
             if (compare != test)
             {
@@ -122,7 +131,7 @@ public class ShellReaderTests
             {
                 ((VirtualConsole)reader.Terminal).InputStream = new(keyStrokes);
                 
-                string compare = reader.ReadPassword(prompt: prompt, mask: mask);
+                string compare = reader.ReadPassword(prompt: prompt, mask: mask) ?? string.Empty;
 
                 if (compare != test)
                 {
