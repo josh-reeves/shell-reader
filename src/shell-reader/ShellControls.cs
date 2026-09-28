@@ -41,6 +41,12 @@ public class ShellControls : IShellControls
 
     }
 
+    public string? CtrlC(string input)
+        => Enter(null);
+    
+    public string? CtrlJ(string input)
+        => Enter(input);
+
     // This works, but really needs to be cleaned up:
     public string Backspace(string input)
     {
@@ -86,6 +92,38 @@ public class ShellControls : IShellControls
         return input;
 
     }
+
+    public string CtrlH(string input)
+        => Backspace(input);
+
+    public string CtrlD(string input)
+    {
+        Reader.Terminal.Cursor.DeleteCharacter();
+
+        int col = Reader.Terminal.Cursor.Column - Reader.Prompt.Length,
+                  charIndex = col - 1;
+        
+        if (Reader.IsPassword && Reader.Mask.Length > 0)
+        {
+            charIndex /= Reader.Mask.Length;
+        
+        }
+
+        if (charIndex >= input.Length)
+        {
+            charIndex = input.Length - 1;
+
+        }
+
+        input.Remove(charIndex);
+
+        return input;
+
+    }
+
+    public string CtrlL(string input)
+        => input;
+
     public string CtrlP(string input)
     {
         if (Reader.IsPassword)
@@ -196,9 +234,6 @@ public class ShellControls : IShellControls
 
     public string End(string input)
         => CtrlE(input);
-
-    public string? CtrlC(string? input)
-        => Enter(null);
 
     #endregion
 
