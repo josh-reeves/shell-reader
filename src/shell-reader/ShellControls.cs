@@ -100,6 +100,12 @@ public class ShellControls : IShellControls
     {
         Reader.Terminal.Cursor.DeleteCharacter();
 
+        if (string.IsNullOrEmpty(input))
+        {
+            return input;
+
+        }
+
         int col = Reader.Terminal.Cursor.Column - Reader.Prompt.Length,
                   charIndex = col - 1;
         
@@ -115,11 +121,14 @@ public class ShellControls : IShellControls
 
         }
 
-        input.Remove(charIndex);
+        input = input.Remove(charIndex, 1);
 
         return input;
 
     }
+
+    public string Del(string input)
+        => CtrlD(input);
 
     public string CtrlL(string input)
         => input;
