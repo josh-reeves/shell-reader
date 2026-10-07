@@ -23,6 +23,11 @@ public class ShellReader : IShellReader
         Terminal = terminal;
 
     }
+    
+    #region Delegates
+    public delegate string CaptureText(string input);
+
+    #endregion
 
     #region Events
     public event EventHandler<ConsoleKeyInfo>? InputReceived;
@@ -85,28 +90,19 @@ public class ShellReader : IShellReader
     }
 
     private string UpdateTextAtCursor(string original, string insert)
-    {
-        int col = Terminal.Cursor.Column,
-            adjusted = col - Prompt.Length,
-            textLength = (IsPassword && Mask.Length <= 0) ? 0 : original.Length;
-        
-        string updated = original;
+    {        
+        string updated = original.Insert(cursor.Index, insert),
+               trailing = string.Empty;
 
-        if (adjusted <= textLength)
-        {
-            updated = original.Insert(adjusted - 1, insert);
-        
-        }
-        else
-        {
-            updated += insert;
-            
-        }
+        cursor.Index++;
 
-        insert = IsPassword ? Mask : insert;
+        trailing = updated.Substring(cursor.Index);
 
-        Terminal.Cursor.InsertSpace(insert.Length);
+        insert = IsPassword ? Mask : insert + trailing;
+
         Terminal.Write(insert);
+
+        cursor.MoveLeft(trailing.Length);
     
         return updated;
 
@@ -168,6 +164,8 @@ public class ShellReader : IShellReader
         }
 
         Terminal.WriteLine();
+
+        Terminal.Cursor.Index = 0;
 
         Prompt = temp;
 
@@ -284,6 +282,9 @@ public class Terminal : IConsole
             virtualCursor = (1, 1);
 
             IsVirtual = Console.IsInputRedirected;
+            Index = 0;
+
+            Console.WriteLine($"{escapePrefix}7h");
             
         }
 
@@ -295,6 +296,8 @@ public class Terminal : IConsole
         public int Column { get => GetPosition().col; }
 
         public int Row { get => GetPosition().row; }
+
+        public int Index { get; set; }
 
         #endregion
 
@@ -397,15 +400,26 @@ public class Terminal : IConsole
 
         public void MoveLeft(int count = 1)
         {
+            if (count == 0)
+            {
+                return;
+
+            }
+
             terminal.Write($"{escapePrefix}{count}D");
 
             virtualCursor.col--;
 
         }
-            
         
         public void MoveRight(int count = 1) 
         {
+            if (count == 0)
+            {
+                return;
+
+            }
+
             terminal.Write($"{escapePrefix}{count}C");
 
             virtualCursor.col++;

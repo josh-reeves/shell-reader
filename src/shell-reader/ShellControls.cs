@@ -4,8 +4,14 @@ namespace ShellReader;
 
 public class ShellControls : IShellControls
 {
+    #region Fields
     private int histIndex;
+    
+    private ITextCursor cursor => Reader.Terminal.Cursor;
 
+    #endregion
+
+    #region Constructor(s)
     public ShellControls(IShellReader reader)
     {
         Reader = reader;
@@ -15,6 +21,8 @@ public class ShellControls : IShellControls
         histIndex = 0;
 
     }
+
+    #endregion
 
     #region Properties
     public IShellReader Reader { get; set; }
@@ -187,11 +195,10 @@ public class ShellControls : IShellControls
 
     public string CtrlB(string input)
     {
-        int col = Reader.Terminal.Cursor.Column;
-
-        if (col > Reader.Prompt.Length + 1)
+        if (cursor.Index > 0)
         {
-            Reader.Terminal.Cursor.MoveLeft();
+            cursor.MoveLeft();
+            cursor.Index--;
 
         }
         
@@ -204,12 +211,19 @@ public class ShellControls : IShellControls
 
     public string CtrlF(string input)
     {
-        int col = Reader.Terminal.Cursor.Column,
-            textLength = Reader.IsPassword ? input.Length * Reader.Mask.Length : input.Length;
+        int col = cursor.Column,
+            textLength = input.Length;
 
-        if (col < Reader.Prompt.Length + textLength + 1)
+        if (Reader.IsPassword)
+        {
+            textLength *= Reader.Mask.Length;
+
+        }
+
+        if (cursor.Index < textLength)
         {
             Reader.Terminal.Cursor.MoveRight();
+            cursor.Index++;
 
         }
 
