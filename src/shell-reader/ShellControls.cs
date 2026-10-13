@@ -5,7 +5,9 @@ namespace ShellReader;
 public class ShellControls : IShellControls
 {
     #region Fields
-    private int histIndex;
+    private int cursorIndex;
+    private int historyIndex;
+    private string buffer;
     
     private ITextCursor cursor => Reader.Terminal.Cursor;
 
@@ -14,12 +16,15 @@ public class ShellControls : IShellControls
     #region Constructor(s)
     public ShellControls(IShellReader reader)
     {
+        cursorIndex = 0;
+        historyIndex = 0;
+        buffer = string.Empty;
+
         Reader = reader;
-        
+        Reader.CaptureText = UpdateTextAtCursor;
+
         History = [string.Empty];        
     
-        histIndex = 0;
-
     }
 
     #endregion
@@ -41,7 +46,9 @@ public class ShellControls : IShellControls
 
         }
 
-        histIndex = History.Count - 1;
+        cursorIndex = 0;
+        historyIndex = History.Count - 1;
+        buffer = string.Empty;
 
         Reader.IsReading = false;
         
@@ -58,44 +65,39 @@ public class ShellControls : IShellControls
     // This works, but really needs to be cleaned up:
     public string Backspace(string input)
     {
+        if (cursorIndex <= 0)
+        {
+            return input;
+
+        }
+
+        cursor.MoveLeft();
+        cursor.DeleteCharacter();
+
+        cursorIndex--;
+
         if (input.Length <= 0)
         {
             return input;
-            
-        }
-
-        if (Reader.IsPassword && Reader.Mask.Length <= 0)
-        {
-            input = input[..(input.Length - 1)];
-
-            return input;
 
         }
-
-        int col = Reader.Terminal.Cursor.Column,
-            cols = 1,
-            cursorOffset = 1,
-            adjusted = col - Reader.Prompt.Length,
-            charIndex = adjusted - cursorOffset - 1;
-
-        if (charIndex < 0)
-        {
-            return input;
-            
-        }
+                
+        int charIndex = cursorIndex;
 
         if (Reader.IsPassword)
         {
-            charIndex /= Reader.Mask.Length;
-            cols *= Reader.Mask.Length;
+            bool maskLength = Reader.Mask.Length > 0;    
+            charIndex = maskLength ? charIndex / Reader.Mask.Length : input.Length;
 
-            cursorOffset = adjusted % Reader.Mask.Length;
+        }
+
+        if (charIndex > input.Length - 1) 
+        { 
+            charIndex = input.Length - 1; 
             
         }
 
         input = input.Remove(charIndex, 1);
-        Reader.Terminal.Cursor.SetColumn(col - cursorOffset + 1 - cols);
-        Reader.Terminal.Cursor.DeleteCharacter(cols);
 
         return input;
 
@@ -149,11 +151,11 @@ public class ShellControls : IShellControls
 
         }
 
-        if (histIndex > 0)
+        if (historyIndex > 0)
         {
-            histIndex--;
+            historyIndex--;
 
-            input = History[histIndex];            
+            input = History[historyIndex];            
 
         }
 
@@ -175,11 +177,11 @@ public class ShellControls : IShellControls
 
         }
 
-        if (histIndex < History.Count - 1)
+        if (historyIndex < History.Count - 1)
         {
-            histIndex++;
+            historyIndex++;
 
-            input = History[histIndex];
+            input = History[historyIndex];
             
         }
 
@@ -195,10 +197,10 @@ public class ShellControls : IShellControls
 
     public string CtrlB(string input)
     {
-        if (cursor.Index > 0)
+        if (cursorIndex > 0)
         {
             cursor.MoveLeft();
-            cursor.Index--;
+            cursorIndex--;
 
         }
         
@@ -211,8 +213,7 @@ public class ShellControls : IShellControls
 
     public string CtrlF(string input)
     {
-        int col = cursor.Column,
-            textLength = input.Length;
+        int textLength = input.Length;
 
         if (Reader.IsPassword)
         {
@@ -220,10 +221,10 @@ public class ShellControls : IShellControls
 
         }
 
-        if (cursor.Index < textLength)
+        if (cursorIndex < textLength)
         {
             Reader.Terminal.Cursor.MoveRight();
-            cursor.Index++;
+            cursorIndex++;
 
         }
 
@@ -257,6 +258,32 @@ public class ShellControls : IShellControls
 
     public string End(string input)
         => CtrlE(input);
+
+    public string UpdateTextAtCursor(string original, string insert)
+    {
+        int charIndex = cursorIndex;
+        string displayText = insert;
+
+        if (Reader.IsPassword)
+        {
+            displayText = Reader.Mask;
+            charIndex = Reader.Mask.Length > 0 ? charIndex / Reader.Mask.Length : original.Length;
+            
+        }
+
+        string updated = original.Insert(charIndex, insert);
+
+        Reader.Terminal.Write(displayText + buffer[cursorIndex..]);
+
+        cursor.MoveLeft(buffer[cursorIndex..].Length);
+
+        buffer = buffer[..cursorIndex] + displayText + buffer[cursorIndex..];
+
+        cursorIndex+= displayText.Length;
+
+        return updated;
+    
+    }
 
     #endregion
 

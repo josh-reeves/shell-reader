@@ -22,12 +22,11 @@ public class ShellReader : IShellReader
         
         Terminal = terminal;
 
-    }
-    
-    #region Delegates
-    public delegate string CaptureText(string input);
+        /* Configure CaptureText to add new characters to the end of input 
+         *  string by default:*/
+        CaptureText = (original, insert) => original + insert;
 
-    #endregion
+    }
 
     #region Events
     public event EventHandler<ConsoleKeyInfo>? InputReceived;
@@ -44,6 +43,8 @@ public class ShellReader : IShellReader
     public string Mask { get; private set; }
 
     public IConsole Terminal { get; set; }
+
+    public Func<string, string, string> CaptureText { get; set; }
 
     public IDictionary<ConsoleKeyInfo, Func<string, string?>> KeyMap { get; }
 
@@ -87,25 +88,6 @@ public class ShellReader : IShellReader
     {
         InputReceived?.Invoke(this, keyInfo);
         
-    }
-
-    private string UpdateTextAtCursor(string original, string insert)
-    {        
-        string updated = original.Insert(cursor.Index, insert),
-               trailing = string.Empty;
-
-        cursor.Index++;
-
-        trailing = updated.Substring(cursor.Index);
-
-        insert = IsPassword ? Mask : insert + trailing;
-
-        Terminal.Write(insert);
-
-        cursor.MoveLeft(trailing.Length);
-    
-        return updated;
-
     }
 
     public string? ReadPassword(string? prompt = null, string mask = "")
@@ -157,15 +139,13 @@ public class ShellReader : IShellReader
 
             if (!char.IsControl(keyPress.KeyChar) && input is not null)
             {
-                input = UpdateTextAtCursor(input, keyPress.KeyChar.ToString());
+                input = CaptureText(input, keyPress.KeyChar.ToString());
 
             }
 
         }
 
         Terminal.WriteLine();
-
-        Terminal.Cursor.Index = 0;
 
         Prompt = temp;
 
@@ -178,14 +158,6 @@ public class ShellReader : IShellReader
         cursor.SetColumn(1 + startPos);
 
         cursor.ClearRemaining();
-
-    }
-
-    public void Insert(string insert, int startPos = 0)
-    {
-        cursor.SetColumn(1 + startPos);
-
-        Terminal.Write(insert);
 
     }
 
@@ -282,9 +254,6 @@ public class Terminal : IConsole
             virtualCursor = (1, 1);
 
             IsVirtual = Console.IsInputRedirected;
-            Index = 0;
-
-            Console.WriteLine($"{escapePrefix}7h");
             
         }
 
@@ -296,8 +265,6 @@ public class Terminal : IConsole
         public int Column { get => GetPosition().col; }
 
         public int Row { get => GetPosition().row; }
-
-        public int Index { get; set; }
 
         #endregion
 
