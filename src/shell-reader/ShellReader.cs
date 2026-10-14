@@ -22,6 +22,10 @@ public class ShellReader : IShellReader
         
         Terminal = terminal;
 
+        /* Configure CaptureText to add new characters to the end of input 
+         *  string by default:*/
+        CaptureText = (original, insert) => original + insert;
+
     }
 
     #region Events
@@ -39,6 +43,8 @@ public class ShellReader : IShellReader
     public string Mask { get; private set; }
 
     public IConsole Terminal { get; set; }
+
+    public Func<string, string, string> CaptureText { get; set; }
 
     public IDictionary<ConsoleKeyInfo, Func<string, string?>> KeyMap { get; }
 
@@ -82,34 +88,6 @@ public class ShellReader : IShellReader
     {
         InputReceived?.Invoke(this, keyInfo);
         
-    }
-
-    private string UpdateTextAtCursor(string original, string insert)
-    {
-        int col = Terminal.Cursor.Column,
-            adjusted = col - Prompt.Length,
-            textLength = (IsPassword && Mask.Length <= 0) ? 0 : original.Length;
-        
-        string updated = original;
-
-        if (adjusted <= textLength)
-        {
-            updated = original.Insert(adjusted - 1, insert);
-        
-        }
-        else
-        {
-            updated += insert;
-            
-        }
-
-        insert = IsPassword ? Mask : insert;
-
-        Terminal.Cursor.InsertSpace(insert.Length);
-        Terminal.Write(insert);
-    
-        return updated;
-
     }
 
     public string? ReadPassword(string? prompt = null, string mask = "")
@@ -161,7 +139,7 @@ public class ShellReader : IShellReader
 
             if (!char.IsControl(keyPress.KeyChar) && input is not null)
             {
-                input = UpdateTextAtCursor(input, keyPress.KeyChar.ToString());
+                input = CaptureText(input, keyPress.KeyChar.ToString());
 
             }
 
@@ -180,14 +158,6 @@ public class ShellReader : IShellReader
         cursor.SetColumn(1 + startPos);
 
         cursor.ClearRemaining();
-
-    }
-
-    public void Insert(string insert, int startPos = 0)
-    {
-        cursor.SetColumn(1 + startPos);
-
-        Terminal.Write(insert);
 
     }
 
@@ -397,15 +367,26 @@ public class Terminal : IConsole
 
         public void MoveLeft(int count = 1)
         {
+            if (count == 0)
+            {
+                return;
+
+            }
+
             terminal.Write($"{escapePrefix}{count}D");
 
             virtualCursor.col--;
 
         }
-            
         
         public void MoveRight(int count = 1) 
         {
+            if (count == 0)
+            {
+                return;
+
+            }
+
             terminal.Write($"{escapePrefix}{count}C");
 
             virtualCursor.col++;

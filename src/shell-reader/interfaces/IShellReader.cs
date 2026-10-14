@@ -13,6 +13,8 @@ public interface IShellReader
 
     public IConsole Terminal { get; set; }
 
+    public Func<string, string, string> CaptureText { get; set; }
+
     public IDictionary<ConsoleKeyInfo, Func<string, string?>> KeyMap { get; }
     
     #endregion
@@ -28,8 +30,6 @@ public interface IShellReader
     public string? Read(string? prompt = null, bool isPassword = false);
 
     public void ClearLine(int startPos = 0);
-
-    public void Insert(string input, int startPos = 0);
 
     #endregion
 

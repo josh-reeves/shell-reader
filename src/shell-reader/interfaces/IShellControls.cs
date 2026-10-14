@@ -10,7 +10,17 @@ public interface IShellControls
     #region Methods
     public string? Enter(string input);
 
+    public string? CtrlC(string input);
+
+    public string? CtrlJ(string input);
+
     public string Backspace(string input);
+
+    public string CtrlH(string input);
+
+    public string CtrlD(string input);
+
+    public string CtrlL(string input);
 
     public string CtrlP(string input);
 
@@ -23,8 +33,6 @@ public interface IShellControls
     public string CtrlA(string input);
 
     public string CtrlE(string input);
-
-    public string? CtrlC(string input);
 
     #endregion
     
