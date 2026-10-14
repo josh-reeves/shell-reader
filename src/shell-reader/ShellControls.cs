@@ -162,6 +162,9 @@ public class ShellControls : IShellControls
         Reader.ClearLine(Reader.Prompt.Length);
         Reader.Terminal.Write(input);
 
+        cursorIndex = input.Length;
+        buffer = input;
+
         return input;
 
     }
@@ -187,6 +190,9 @@ public class ShellControls : IShellControls
 
         Reader.ClearLine(Reader.Prompt.Length);
         Reader.Terminal.Write(input);
+
+        cursorIndex = input.Length;
+        buffer = input;
 
         return input;
         
