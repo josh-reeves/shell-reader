@@ -76,6 +76,8 @@ public class ShellControls : IShellControls
 
         cursorIndex--;
 
+        buffer = buffer.Remove(cursorIndex, 1);
+
         if (input.Length <= 0)
         {
             return input;
@@ -93,7 +95,7 @@ public class ShellControls : IShellControls
 
         if (charIndex > input.Length - 1) 
         { 
-            charIndex = input.Length - 1; 
+            return input;
             
         }
 
@@ -109,6 +111,7 @@ public class ShellControls : IShellControls
     public string CtrlD(string input)
     {
         Reader.Terminal.Cursor.DeleteCharacter();
+        buffer = buffer.Remove(cursorIndex, 1);
 
         if (string.IsNullOrEmpty(input))
         {
@@ -219,15 +222,7 @@ public class ShellControls : IShellControls
 
     public string CtrlF(string input)
     {
-        int textLength = input.Length;
-
-        if (Reader.IsPassword)
-        {
-            textLength *= Reader.Mask.Length;
-
-        }
-
-        if (cursorIndex < textLength)
+        if (cursorIndex < buffer.Length)
         {
             Reader.Terminal.Cursor.MoveRight();
             cursorIndex++;
