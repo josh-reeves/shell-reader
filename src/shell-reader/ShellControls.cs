@@ -110,8 +110,12 @@ public class ShellControls : IShellControls
 
     public string CtrlD(string input)
     {
-        Reader.Terminal.Cursor.DeleteCharacter();
-        buffer = buffer.Remove(cursorIndex, 1);
+        if (buffer.Length > 0)
+        {
+            Reader.Terminal.Cursor.DeleteCharacter();
+            buffer = buffer.Remove(cursorIndex, 1);
+
+        }
 
         if (string.IsNullOrEmpty(input))
         {
