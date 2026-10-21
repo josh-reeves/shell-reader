@@ -32,7 +32,7 @@ public class ShellControls : IShellControls
     #region Properties
     public IShellReader Reader { get; set; }
 
-    private IList<string> History { get; }
+    private IList<string> History { get; } 
 
     #endregion
 
@@ -65,41 +65,36 @@ public class ShellControls : IShellControls
     // This works, but really needs to be cleaned up:
     public string Backspace(string input)
     {
-        if (cursorIndex <= 0)
+        if (buffer.Length > 0)
         {
-            return input;
+            cursor.MoveLeft();
+            cursor.DeleteCharacter();
+
+            cursorIndex--;
+
+            buffer = buffer.Remove(cursorIndex, 1);
 
         }
 
-        cursor.MoveLeft();
-        cursor.DeleteCharacter();
-
-        cursorIndex--;
-
-        buffer = buffer.Remove(cursorIndex, 1);
-
-        if (input.Length <= 0)
+        if (string.IsNullOrEmpty(input))
         {
             return input;
 
         }
                 
-        int charIndex = cursorIndex;
-
-        if (Reader.IsPassword)
+        if (Reader.IsPassword && Reader.Mask.Length <= 0)
         {
-            bool maskLength = Reader.Mask.Length > 0;    
-            charIndex = maskLength ? charIndex / Reader.Mask.Length : input.Length;
+            input = input[..^1];
+
+            return input;
 
         }
 
-        if (charIndex > input.Length - 1) 
+        if (cursorIndex < input.Length) 
         { 
-            return input;
+            input = input.Remove(cursorIndex, 1);
             
         }
-
-        input = input.Remove(charIndex, 1);
 
         return input;
 
@@ -123,22 +118,11 @@ public class ShellControls : IShellControls
 
         }
 
-        int col = Reader.Terminal.Cursor.Column - Reader.Prompt.Length,
-                  charIndex = col - 1;
-        
-        if (Reader.IsPassword && Reader.Mask.Length > 0)
+        if (cursorIndex < input.Length)
         {
-            charIndex /= Reader.Mask.Length;
-        
-        }
-
-        if (charIndex >= input.Length)
-        {
-            charIndex = input.Length - 1;
+            input = input.Remove(cursorIndex, 1);
 
         }
-
-        input = input.Remove(charIndex, 1);
 
         return input;
 
