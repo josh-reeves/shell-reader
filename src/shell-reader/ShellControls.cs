@@ -251,24 +251,23 @@ public class ShellControls : IShellControls
     public string UpdateTextAtCursor(string original, string insert)
     {
         int charIndex = cursorIndex;
-        string displayText = insert;
+        string mask = Reader.IsPassword ? Reader.Mask : insert;
 
-        if (Reader.IsPassword)
+        if (Reader.IsPassword && (charIndex > original.Length || Reader.Mask.Length <= 0))
         {
-            displayText = Reader.Mask;
-            charIndex = Reader.Mask.Length > 0 ? charIndex / Reader.Mask.Length : original.Length;
-            
+            charIndex = original.Length;
+
         }
 
         string updated = original.Insert(charIndex, insert);
 
-        Reader.Terminal.Write(displayText + buffer[cursorIndex..]);
+        Reader.Terminal.Write(mask + buffer[cursorIndex..]);
 
         cursor.MoveLeft(buffer[cursorIndex..].Length);
 
-        buffer = buffer[..cursorIndex] + displayText + buffer[cursorIndex..];
+        buffer = buffer[..cursorIndex] + mask + buffer[cursorIndex..];
 
-        cursorIndex+= displayText.Length;
+        cursorIndex+= mask.Length;
 
         return updated;
     
