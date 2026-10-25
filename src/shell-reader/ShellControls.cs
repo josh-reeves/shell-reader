@@ -251,26 +251,49 @@ public class ShellControls : IShellControls
     public string UpdateTextAtCursor(string original, string insert)
     {
         int charIndex = cursorIndex;
-        string mask = Reader.IsPassword ? Reader.Mask : insert;
+        string updated = original,
+               displayText = Reader.IsPassword ? Reader.Mask : insert;        
 
-        if (Reader.IsPassword && (charIndex > original.Length || Reader.Mask.Length <= 0))
+        if (charIndex > original.Length || (Reader.IsPassword && string.IsNullOrEmpty(Reader.Mask)))
         {
             charIndex = original.Length;
 
         }
 
-        string updated = original.Insert(charIndex, insert);
+        if (!Reader.InsertMode)
+        {
+            int remaining = updated[charIndex..].Length,
+                maxLength = insert.Length < remaining ? insert.Length : remaining;
 
-        Reader.Terminal.Write(mask + buffer[cursorIndex..]);
+            updated = updated.Remove(charIndex, maxLength);
+
+            remaining = buffer[cursorIndex..].Length;
+            maxLength = insert.Length < remaining ? insert.Length : remaining;            
+
+            buffer = buffer.Remove(cursorIndex, maxLength);
+
+        }
+
+        updated = updated.Insert(charIndex, insert);
+
+        Reader.Terminal.Write(displayText + buffer[cursorIndex..]);
 
         cursor.MoveLeft(buffer[cursorIndex..].Length);
 
-        buffer = buffer[..cursorIndex] + mask + buffer[cursorIndex..];
+        buffer = buffer.Insert(cursorIndex, displayText);
 
-        cursorIndex+= mask.Length;
+        cursorIndex+= displayText.Length;
 
         return updated;
     
+    }
+
+    public string Insert(string input)
+    {
+        Reader.InsertMode = !Reader.InsertMode;
+
+        return input;
+
     }
 
     #endregion

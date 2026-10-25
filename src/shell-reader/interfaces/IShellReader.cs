@@ -7,6 +7,8 @@ public interface IShellReader
 
     public bool IsPassword { get; }
 
+    public bool InsertMode { get; set; }
+
     public string Prompt { get; }
 
     public string Mask { get; }

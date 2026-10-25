@@ -10,17 +10,14 @@ public class ShellReader : IShellReader
 
     #endregion
 
-    public ShellReader(string prompt = "", string mask = "", IConsole? terminal = null, IDictionary<ConsoleKeyInfo, Func<string, string?>>? keyMap = null)
+    public ShellReader(bool insertMode = true, string prompt = "", string mask = "", IConsole? terminal = null, IDictionary<ConsoleKeyInfo, Func<string, string?>>? keyMap = null)
     {
-        Mask = mask;
-
+        InsertMode = insertMode;
         Prompt = prompt;
-        
+        Mask = mask;
         KeyMap = keyMap ?? new Dictionary<ConsoleKeyInfo, Func<string, string?>>();
 
-        terminal ??= new Terminal();
-        
-        Terminal = terminal;
+        Terminal = terminal ??= new Terminal();
 
         /* Configure CaptureText to add new characters to the end of input 
          *  string by default:*/
@@ -37,6 +34,8 @@ public class ShellReader : IShellReader
     public bool IsReading { get; set; }
 
     public bool IsPassword { get; private set; }
+
+    public bool InsertMode { get; set; }
 
     public string Prompt { get; private set; }
 

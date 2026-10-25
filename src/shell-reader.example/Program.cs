@@ -28,6 +28,14 @@ class Program
         reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.C, false, false, true), controls.CtrlC);
         reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.D, false, false, true), controls.CtrlD);
         reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.Delete, false, false, false), controls.Del);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.F, false, false, true), controls.CtrlF);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.H, false, false, true), controls.CtrlH);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.J, false, false, true), controls.CtrlJ);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.L, false, false, true), controls.CtrlL);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.N, false, false, true), controls.CtrlN);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.P, false, false, true), controls.CtrlP);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.B, false, false, true), controls.CtrlB);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.Insert, false, false, false), controls.Insert);
 
         Console.TreatControlCAsInput = true;
 
