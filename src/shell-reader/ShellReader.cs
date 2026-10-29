@@ -152,14 +152,6 @@ public class ShellReader : IShellReader
 
     }
 
-    public void ClearLine(int startPos = 0)
-    {
-        cursor.SetColumn(1 + startPos);
-
-        cursor.ClearRemaining();
-
-    }
-
     #endregion
 
 }
@@ -408,6 +400,9 @@ public class Terminal : IConsole
         
         public void ClearRemaining() 
             => terminal.Write($"{escapePrefix}K");
+
+        public void ClearScreen()
+            => terminal.Write($"{escapePrefix}2J");
 
         public void SetPosition(int row, int col) 
         {

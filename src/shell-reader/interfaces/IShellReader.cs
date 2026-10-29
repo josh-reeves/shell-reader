@@ -31,8 +31,6 @@ public interface IShellReader
 
     public string? Read(string? prompt = null, bool isPassword = false);
 
-    public void ClearLine(int startPos = 0);
-
     #endregion
 
 }

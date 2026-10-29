@@ -62,7 +62,6 @@ public class ShellControls : IShellControls
     public string? CtrlJ(string input)
         => Enter(input);
 
-    // This works, but really needs to be cleaned up:
     public string Backspace(string input)
     {
         if (buffer.Length > 0)
@@ -132,7 +131,15 @@ public class ShellControls : IShellControls
         => CtrlD(input);
 
     public string CtrlL(string input)
-        => input;
+    {
+        cursor.ClearScreen();
+        cursor.SetPosition(1, 1);
+
+        Reader.Terminal.Write(Reader.Prompt + input);
+
+        return input;
+
+    }
 
     public string CtrlP(string input)
     {
@@ -150,7 +157,9 @@ public class ShellControls : IShellControls
 
         }
 
-        Reader.ClearLine(Reader.Prompt.Length);
+        cursor.SetColumn(Reader.Prompt.Length + 1);
+        cursor.ClearRemaining();
+
         Reader.Terminal.Write(input);
 
         cursorIndex = input.Length;
@@ -179,7 +188,9 @@ public class ShellControls : IShellControls
             
         }
 
-        Reader.ClearLine(Reader.Prompt.Length);
+        cursor.SetColumn(Reader.Prompt.Length + 1);
+        cursor.ClearRemaining();
+
         Reader.Terminal.Write(input);
 
         cursorIndex = input.Length;

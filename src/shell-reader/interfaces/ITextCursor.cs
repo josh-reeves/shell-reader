@@ -28,6 +28,8 @@ public interface ITextCursor
 
     public void ClearRemaining();
 
+    public void ClearScreen();
+
     public void SetPosition(int row, int col);
 
     public (int row, int col) GetPosition();
