@@ -7,6 +7,8 @@ public interface IShellReader
 
     public bool IsPassword { get; }
 
+    public bool InsertMode { get; set; }
+
     public string Prompt { get; }
 
     public string Mask { get; }
@@ -28,8 +30,6 @@ public interface IShellReader
     public string? ReadPassword(string? prompt = null, string mask = "");
 
     public string? Read(string? prompt = null, bool isPassword = false);
-
-    public void ClearLine(int startPos = 0);
 
     #endregion
 

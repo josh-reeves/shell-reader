@@ -34,6 +34,8 @@ public interface IShellControls
 
     public string CtrlE(string input);
 
+    public string Insert(string input);
+
     #endregion
     
 }

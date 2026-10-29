@@ -32,7 +32,7 @@ public class ShellControls : IShellControls
     #region Properties
     public IShellReader Reader { get; set; }
 
-    private IList<string> History { get; }
+    private IList<string> History { get; } 
 
     #endregion
 
@@ -62,42 +62,38 @@ public class ShellControls : IShellControls
     public string? CtrlJ(string input)
         => Enter(input);
 
-    // This works, but really needs to be cleaned up:
     public string Backspace(string input)
     {
-        if (cursorIndex <= 0)
+        if (buffer.Length > 0)
         {
-            return input;
+            cursor.MoveLeft();
+            cursor.DeleteCharacter();
+
+            cursorIndex--;
+
+            buffer = buffer.Remove(cursorIndex, 1);
 
         }
 
-        cursor.MoveLeft();
-        cursor.DeleteCharacter();
-
-        cursorIndex--;
-
-        if (input.Length <= 0)
+        if (string.IsNullOrEmpty(input))
         {
             return input;
 
         }
                 
-        int charIndex = cursorIndex;
-
-        if (Reader.IsPassword)
+        if (Reader.IsPassword && Reader.Mask.Length <= 0)
         {
-            bool maskLength = Reader.Mask.Length > 0;    
-            charIndex = maskLength ? charIndex / Reader.Mask.Length : input.Length;
+            input = input[..^1];
+
+            return input;
 
         }
 
-        if (charIndex > input.Length - 1) 
+        if (cursorIndex < input.Length) 
         { 
-            charIndex = input.Length - 1; 
+            input = input.Remove(cursorIndex, 1);
             
         }
-
-        input = input.Remove(charIndex, 1);
 
         return input;
 
@@ -108,7 +104,12 @@ public class ShellControls : IShellControls
 
     public string CtrlD(string input)
     {
-        Reader.Terminal.Cursor.DeleteCharacter();
+        if (buffer.Length > 0)
+        {
+            Reader.Terminal.Cursor.DeleteCharacter();
+            buffer = buffer.Remove(cursorIndex, 1);
+
+        }
 
         if (string.IsNullOrEmpty(input))
         {
@@ -116,22 +117,11 @@ public class ShellControls : IShellControls
 
         }
 
-        int col = Reader.Terminal.Cursor.Column - Reader.Prompt.Length,
-                  charIndex = col - 1;
-        
-        if (Reader.IsPassword && Reader.Mask.Length > 0)
+        if (cursorIndex < input.Length)
         {
-            charIndex /= Reader.Mask.Length;
-        
-        }
-
-        if (charIndex >= input.Length)
-        {
-            charIndex = input.Length - 1;
+            input = input.Remove(cursorIndex, 1);
 
         }
-
-        input = input.Remove(charIndex, 1);
 
         return input;
 
@@ -141,7 +131,15 @@ public class ShellControls : IShellControls
         => CtrlD(input);
 
     public string CtrlL(string input)
-        => input;
+    {
+        cursor.ClearScreen();
+        cursor.SetPosition(1, 1);
+
+        Reader.Terminal.Write(Reader.Prompt + input);
+
+        return input;
+
+    }
 
     public string CtrlP(string input)
     {
@@ -159,7 +157,9 @@ public class ShellControls : IShellControls
 
         }
 
-        Reader.ClearLine(Reader.Prompt.Length);
+        cursor.SetColumn(Reader.Prompt.Length + 1);
+        cursor.ClearRemaining();
+
         Reader.Terminal.Write(input);
 
         cursorIndex = input.Length;
@@ -188,7 +188,9 @@ public class ShellControls : IShellControls
             
         }
 
-        Reader.ClearLine(Reader.Prompt.Length);
+        cursor.SetColumn(Reader.Prompt.Length + 1);
+        cursor.ClearRemaining();
+
         Reader.Terminal.Write(input);
 
         cursorIndex = input.Length;
@@ -219,15 +221,7 @@ public class ShellControls : IShellControls
 
     public string CtrlF(string input)
     {
-        int textLength = input.Length;
-
-        if (Reader.IsPassword)
-        {
-            textLength *= Reader.Mask.Length;
-
-        }
-
-        if (cursorIndex < textLength)
+        if (cursorIndex < buffer.Length)
         {
             Reader.Terminal.Cursor.MoveRight();
             cursorIndex++;
@@ -268,27 +262,49 @@ public class ShellControls : IShellControls
     public string UpdateTextAtCursor(string original, string insert)
     {
         int charIndex = cursorIndex;
-        string displayText = insert;
+        string updated = original,
+               displayText = Reader.IsPassword ? Reader.Mask : insert;        
 
-        if (Reader.IsPassword)
+        if (charIndex > original.Length || (Reader.IsPassword && string.IsNullOrEmpty(Reader.Mask)))
         {
-            displayText = Reader.Mask;
-            charIndex = Reader.Mask.Length > 0 ? charIndex / Reader.Mask.Length : original.Length;
-            
+            charIndex = original.Length;
+
         }
 
-        string updated = original.Insert(charIndex, insert);
+        if (!Reader.InsertMode)
+        {
+            int remaining = updated[charIndex..].Length,
+                maxLength = insert.Length < remaining ? insert.Length : remaining;
+
+            updated = updated.Remove(charIndex, maxLength);
+
+            remaining = buffer[cursorIndex..].Length;
+            maxLength = insert.Length < remaining ? insert.Length : remaining;            
+
+            buffer = buffer.Remove(cursorIndex, maxLength);
+
+        }
+
+        updated = updated.Insert(charIndex, insert);
 
         Reader.Terminal.Write(displayText + buffer[cursorIndex..]);
 
         cursor.MoveLeft(buffer[cursorIndex..].Length);
 
-        buffer = buffer[..cursorIndex] + displayText + buffer[cursorIndex..];
+        buffer = buffer.Insert(cursorIndex, displayText);
 
         cursorIndex+= displayText.Length;
 
         return updated;
     
+    }
+
+    public string Insert(string input)
+    {
+        Reader.InsertMode = !Reader.InsertMode;
+
+        return input;
+
     }
 
     #endregion
