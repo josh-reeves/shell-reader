@@ -56,11 +56,14 @@ public class ShellControls : IShellControls
 
     }
 
+    public string? CtrlJ(string input)
+        => Enter(input);
+
     public string? CtrlC(string input)
         => Enter(null);
     
-    public string? CtrlJ(string input)
-        => Enter(input);
+    public string? CtrlZ(string input)
+        => CtrlC(input);
 
     public string Backspace(string input)
     {
