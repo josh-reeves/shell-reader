@@ -310,6 +310,34 @@ public class ShellControls : IShellControls
 
     }
 
+    public string F3(string input)
+    {
+        if (Reader.IsPassword)
+        {
+            return input;
+
+        }
+
+        if (historyIndex > 0)
+        {
+            historyIndex--;
+
+            input = History[historyIndex];
+
+            cursor.SetColumn(Reader.Prompt.Length + 1);
+            cursor.ClearRemaining();
+
+            cursorIndex = input.Length;
+            buffer = input;
+
+            Reader.Terminal.Write(buffer);
+            
+        }
+
+        return input;
+
+    }
+
     #endregion
 
 }

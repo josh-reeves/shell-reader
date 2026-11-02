@@ -45,7 +45,7 @@ public class ShellReader : IShellReader
 
     public Func<string, string, string> CaptureText { get; set; }
 
-    public IDictionary<ConsoleKeyInfo, Func<string, string?>> KeyMap { get; }
+    public IDictionary<ConsoleKeyInfo, Func<string, string?>> KeyMap { get; set; }
 
     #endregion
 

@@ -35,7 +35,9 @@ class Program
         reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.N, false, false, true), controls.CtrlN);
         reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.P, false, false, true), controls.CtrlP);
         reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.B, false, false, true), controls.CtrlB);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.Z, false, false, true), controls.CtrlZ);
         reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.Insert, false, false, false), controls.Insert);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.F3, false, false, false), controls.F3);
 
         Console.TreatControlCAsInput = true;
 
