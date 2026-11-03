@@ -13,7 +13,7 @@ class Program
                passMsg = $"Enter a sequence of any length to use as a mask. Current mask: {mask}",
                welcomeMsg = "ShellReader Example. Type 'pass' to enter password mode. Type 'exit' to quit:";
 
-        ShellReader reader = new(prompt: prompt, mask: mask);
+        ShellReader reader = new(prompt: prompt, mask: mask, separators: [" "]);
         ShellControls controls = new(reader);
 
         reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.Enter, false, false, false), controls.Enter);
@@ -38,6 +38,7 @@ class Program
         reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.Z, false, false, true), controls.CtrlZ);
         reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.Insert, false, false, false), controls.Insert);
         reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.F3, false, false, false), controls.F3);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.F, false, true, false), controls.AltF);
 
         Console.TreatControlCAsInput = true;
 

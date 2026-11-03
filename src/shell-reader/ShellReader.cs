@@ -10,11 +10,12 @@ public class ShellReader : IShellReader
 
     #endregion
 
-    public ShellReader(bool insertMode = true, string prompt = "", string mask = "", IConsole? terminal = null, IDictionary<ConsoleKeyInfo, Func<string, string?>>? keyMap = null)
+    public ShellReader(bool insertMode = true, string prompt = "", string mask = "", string[]? separators = null, IConsole? terminal = null, IDictionary<ConsoleKeyInfo, Func<string, string?>>? keyMap = null)
     {
         InsertMode = insertMode;
         Prompt = prompt;
         Mask = mask;
+        Separators = separators ?? [];
         KeyMap = keyMap ?? new Dictionary<ConsoleKeyInfo, Func<string, string?>>();
 
         Terminal = terminal ??= new Terminal();
@@ -44,6 +45,8 @@ public class ShellReader : IShellReader
     public IConsole Terminal { get; set; }
 
     public Func<string, string, string> CaptureText { get; set; }
+
+    public string[] Separators { get; set; }
 
     public IDictionary<ConsoleKeyInfo, Func<string, string?>> KeyMap { get; set; }
 

@@ -338,6 +338,26 @@ public class ShellControls : IShellControls
 
     }
 
+    public string AltF(string input)
+    {
+        foreach (string sep in Reader.Separators)
+        {
+            int index = buffer.IndexOf(sep, cursorIndex);
+
+            if (index >= 0)
+            {
+                cursorIndex = index;
+                cursor.SetColumn(Reader.Prompt.Length + cursorIndex + 1);
+                
+                break;
+
+            }
+
+        }
+        
+        return input;
+    }
+
     #endregion
 
 }
