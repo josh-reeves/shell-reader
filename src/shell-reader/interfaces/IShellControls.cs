@@ -28,13 +28,17 @@ public interface IShellControls
 
     public string CtrlB(string input);
 
+    public string AltB(string input);
+
     public string CtrlF(string input);
+
+    public string AltF(string input);
 
     public string CtrlA(string input);
 
     public string CtrlE(string input);
 
-    public string AltF(string input);
+    public string? CtrlZ(string input);
 
     public string Insert(string input);
 
