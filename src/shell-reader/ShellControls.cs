@@ -107,7 +107,7 @@ public class ShellControls : IShellControls
 
     public string Backspace(string input)
     {
-        if (buffer.Length > 0)
+        if (buffer.Length > 0 && cursorIndex > 0)
         {
             cursor.MoveLeft();
             cursor.DeleteCharacter();

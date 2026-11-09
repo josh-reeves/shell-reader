@@ -361,6 +361,14 @@ public class Terminal : IConsole
 
         public void MoveLeft(int count = 1)
         {
+            if (Column - count < 1)
+            {
+                count = count - Column;
+                MoveUp();
+                SetColumn(Console.WindowWidth);
+
+            }
+
             if (count == 0)
             {
                 return;
@@ -377,6 +385,17 @@ public class Terminal : IConsole
         {
             if (count == 0)
             {
+                return;
+
+            }
+
+            if (Column + count > Console.WindowWidth)
+            {
+                count -= Console.WindowWidth - Column;
+
+                MoveDown();
+                SetColumn(count);
+
                 return;
 
             }
