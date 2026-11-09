@@ -347,7 +347,7 @@ public class Terminal : IConsole
         {
             terminal.Write($"{escapePrefix}{count}A");
         
-            virtualCursor.col--;
+            virtualCursor.row--;
 
         }
 
@@ -355,7 +355,7 @@ public class Terminal : IConsole
         {
             terminal.Write($"{escapePrefix}{count}B");
 
-            virtualCursor.col++;
+            virtualCursor.row++;
             
         }
 
@@ -426,20 +426,13 @@ public class Terminal : IConsole
 
             }
 
-            if (str.Contains(Newline))
-            {
-                virtualCursor.row += str.Count((c) => c == Newline);
-                virtualCursor.col = str.Length - str.LastIndexOf(Newline);
-
-            }
-
         }
 
         public void WriteLine(string str)
         {
             Console.WriteLine(str);
 
-            virtualCursor.row += str.Count((c) => c == Newline) + 1;
+            virtualCursor.row += 1;
             virtualCursor.col = 1;
 
         }

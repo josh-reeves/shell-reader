@@ -37,6 +37,46 @@ public class ShellControls : IShellControls
     #endregion
 
     #region Methods
+    private string UpdateTextAtCursor(string original, string insert)
+    {
+        int charIndex = cursorIndex;
+        string updated = original,
+               displayText = Reader.IsPassword ? Reader.Mask : insert;        
+
+        if (charIndex > original.Length || (Reader.IsPassword && string.IsNullOrEmpty(Reader.Mask)))
+        {
+            charIndex = original.Length;
+
+        }
+
+        if (!Reader.InsertMode)
+        {
+            int remaining = updated[charIndex..].Length,
+                maxLength = insert.Length < remaining ? insert.Length : remaining;
+
+            updated = updated.Remove(charIndex, maxLength);
+
+            remaining = buffer[cursorIndex..].Length;
+            maxLength = insert.Length < remaining ? insert.Length : remaining;            
+
+            buffer = buffer.Remove(cursorIndex, maxLength);
+
+        }
+
+        updated = updated.Insert(charIndex, insert);
+
+        Reader.Terminal.Write(displayText + buffer[cursorIndex..]);
+
+        cursor.MoveLeft(buffer[cursorIndex..].Length);
+
+        buffer = buffer.Insert(cursorIndex, displayText);
+
+        cursorIndex+= displayText.Length;
+
+        return updated;
+    
+    }
+
     public string? Enter(string? input)
     {
         if (!string.IsNullOrWhiteSpace(input) && !Reader.IsPassword)
@@ -262,45 +302,7 @@ public class ShellControls : IShellControls
     public string End(string input)
         => CtrlE(input);
 
-    public string UpdateTextAtCursor(string original, string insert)
-    {
-        int charIndex = cursorIndex;
-        string updated = original,
-               displayText = Reader.IsPassword ? Reader.Mask : insert;        
 
-        if (charIndex > original.Length || (Reader.IsPassword && string.IsNullOrEmpty(Reader.Mask)))
-        {
-            charIndex = original.Length;
-
-        }
-
-        if (!Reader.InsertMode)
-        {
-            int remaining = updated[charIndex..].Length,
-                maxLength = insert.Length < remaining ? insert.Length : remaining;
-
-            updated = updated.Remove(charIndex, maxLength);
-
-            remaining = buffer[cursorIndex..].Length;
-            maxLength = insert.Length < remaining ? insert.Length : remaining;            
-
-            buffer = buffer.Remove(cursorIndex, maxLength);
-
-        }
-
-        updated = updated.Insert(charIndex, insert);
-
-        Reader.Terminal.Write(displayText + buffer[cursorIndex..]);
-
-        cursor.MoveLeft(buffer[cursorIndex..].Length);
-
-        buffer = buffer.Insert(cursorIndex, displayText);
-
-        cursorIndex+= displayText.Length;
-
-        return updated;
-    
-    }
 
     public string Insert(string input)
     {
