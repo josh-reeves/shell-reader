@@ -263,6 +263,40 @@ public class Terminal : IConsole
         #endregion
 
         #region Methods
+        /// <summary>
+        /// Wraps the cursor position to the adjacent line if the cursor is 
+        /// moved beyond the current line.
+        /// </summary>
+        /// <param name="count">
+        /// The number of positions to move the cursor.
+        /// </param>
+        /// <returns>
+        /// The number of positions to move the cursor remaining after wrapping.
+        /// </returns>
+        private int Wrap(int count)
+        {
+            int remaining = count;
+            
+            if (count + Column > Console.WindowWidth)
+            {
+                remaining -= Console.WindowWidth - Column + 1;
+
+                MoveDown();
+                SetColumn(1);
+
+            } else if (Column + count < 1)
+            {
+                remaining = Column + count;
+                
+                MoveUp();
+                SetColumn(Console.WindowWidth);
+
+            }
+
+            return remaining;
+
+        }
+
         private (int row, int col) GetPositionLinux()
         {
             TCGetAttr(STDINFILE, out Termios original);
@@ -343,6 +377,15 @@ public class Terminal : IConsole
 
         }
 
+        public void SetPosition(int row, int col) 
+        {
+            terminal.Write($"{escapePrefix}{row};{col}H");
+
+            virtualCursor.row = row;
+            virtualCursor.col = col;
+
+        }
+
         public void MoveUp(int count = 1) 
         {
             terminal.Write($"{escapePrefix}{count}A");
@@ -361,14 +404,6 @@ public class Terminal : IConsole
 
         public void MoveLeft(int count = 1)
         {
-            if (Column - count < 1)
-            {
-                count = count - Column;
-                MoveUp();
-                SetColumn(Console.WindowWidth);
-
-            }
-
             if (count == 0)
             {
                 return;
@@ -389,23 +424,30 @@ public class Terminal : IConsole
 
             }
 
-            if (Column + count > Console.WindowWidth)
-            {
-                count -= Console.WindowWidth - Column;
-
-                MoveDown();
-                SetColumn(count);
-
-                return;
-
-            }
-
             terminal.Write($"{escapePrefix}{count}C");
 
             virtualCursor.col++;
 
         }
-        
+
+        public void Advance(int count)
+        {
+            count = Wrap(count);
+
+            if (count > 0)
+            {
+                MoveRight(count);
+
+            }
+
+            if (count < 0)
+            {
+                MoveLeft(-count);
+
+            }
+
+        }
+
         public void SetColumn(int col) 
         {
             terminal.Write($"{escapePrefix}{col}G");
@@ -425,15 +467,6 @@ public class Terminal : IConsole
 
         public void ClearScreen()
             => terminal.Write($"{escapePrefix}2J");
-
-        public void SetPosition(int row, int col) 
-        {
-            terminal.Write($"{escapePrefix}{row};{col}H");
-
-            virtualCursor.row = row;
-            virtualCursor.col = col;
-
-        }
 
         public void Write(string str)
         {

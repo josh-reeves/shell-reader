@@ -67,7 +67,7 @@ public class ShellControls : IShellControls
 
         Reader.Terminal.Write(displayText + buffer[cursorIndex..]);
 
-        cursor.MoveLeft(buffer[cursorIndex..].Length);
+        cursor.Advance(-buffer[cursorIndex..].Length);
 
         buffer = buffer.Insert(cursorIndex, displayText);
 
@@ -109,7 +109,7 @@ public class ShellControls : IShellControls
     {
         if (buffer.Length > 0 && cursorIndex > 0)
         {
-            cursor.MoveLeft();
+            cursor.Advance(-1);
             cursor.DeleteCharacter();
 
             cursorIndex--;
@@ -250,7 +250,7 @@ public class ShellControls : IShellControls
     {
         if (cursorIndex > 0)
         {
-            cursor.MoveLeft();
+            cursor.Advance(-1);
             cursorIndex--;
 
         }
@@ -266,7 +266,7 @@ public class ShellControls : IShellControls
     {
         if (cursorIndex < buffer.Length)
         {
-            cursor.MoveRight();
+            cursor.Advance(1);
             cursorIndex++;
 
         }
@@ -378,6 +378,7 @@ public class ShellControls : IShellControls
         }
         
         return input;
+        
     }
 
     #endregion
