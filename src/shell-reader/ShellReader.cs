@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using ShellReader.Interfaces;
+using System.Collections;
 
 namespace ShellReader;
 
@@ -168,6 +169,7 @@ public class Terminal : IConsole
     private const uint ECHO = 0x00000008;
 
     private readonly TextCursor cursor;
+    private string buffer;
 
     #endregion
 
@@ -175,12 +177,28 @@ public class Terminal : IConsole
     public Terminal()
     {        
         cursor = new TextCursor(this);
+        buffer = string.Empty;
 
     }
 
     #endregion
 
     #region Properties
+    public IEnumerable Buffer 
+    {
+        get => buffer;
+
+        set
+        {
+            buffer = value.ToString() ?? string.Empty;
+
+            Console.Write(buffer[cursor.Index..]);
+            
+        }
+
+    }
+
+
     public ITextCursor Cursor { get => cursor; }
 
     #endregion
@@ -246,6 +264,7 @@ public class Terminal : IConsole
         {
             terminal = (Terminal)parent;
             virtualCursor = (1, 1);
+            Index = 0;
 
             IsVirtual = Console.IsInputRedirected;
             
@@ -259,6 +278,8 @@ public class Terminal : IConsole
         public int Column { get => GetPosition().col; }
 
         public int Row { get => GetPosition().row; }
+
+        public int Index { get; private set; }
 
         #endregion
 
@@ -470,13 +491,18 @@ public class Terminal : IConsole
 
         public void Write(string str)
         {
-            Console.Write(str);
-
-            if (!str.StartsWith(escapePrefix))
+            if (str.StartsWith(escapePrefix))
             {
-                virtualCursor.col += str.Length;
+                Console.Write(str);
+
+                return;
 
             }
+
+            terminal.Buffer = (terminal.Buffer as string)?.Insert(Index, str) ?? terminal.Buffer.ToString() ?? string.Empty;
+
+            virtualCursor.col += str.Length;
+            Index += str.Length;
 
         }
 
@@ -486,6 +512,12 @@ public class Terminal : IConsole
 
             virtualCursor.row += 1;
             virtualCursor.col = 1;
+        
+        }
+
+        public void Reset()
+        {
+            Index = 0;
 
         }
 

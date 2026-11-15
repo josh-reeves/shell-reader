@@ -9,6 +9,8 @@ public interface ITextCursor
 
     public int Row { get; }
 
+    public int Index { get; }
+
     #endregion
 
     #region Methods
