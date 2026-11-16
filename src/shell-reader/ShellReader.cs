@@ -231,8 +231,7 @@ public class Terminal : IConsole
     private class TextCursor : ITextCursor
     {
         #region Fields
-        private const char Newline = '\n',
-                           Escape = '\u001B';
+        private const char Escape = '\u001B';
 
         private (int row, int col) virtualCursor;
         private string escapePrefix => $"{Escape}[";
@@ -390,7 +389,7 @@ public class Terminal : IConsole
         {
             terminal.Write($"{escapePrefix}{count}A");
         
-            virtualCursor.row--;
+            virtualCursor.row -= count;
 
         }
 
@@ -398,12 +397,18 @@ public class Terminal : IConsole
         {
             terminal.Write($"{escapePrefix}{count}B");
 
-            virtualCursor.row++;
+            virtualCursor.row += count;
             
         }
 
         public void MoveLeft(int count = 1)
         {
+            if (Column - count < 1)
+            {
+                count -= count - Column - 1;
+            
+            }
+
             if (count == 0)
             {
                 return;
@@ -412,12 +417,18 @@ public class Terminal : IConsole
 
             terminal.Write($"{escapePrefix}{count}D");
 
-            virtualCursor.col--;
+            virtualCursor.col -= count;
 
         }
         
         public void MoveRight(int count = 1) 
         {
+            if (Column + count > Console.WindowWidth)
+            {
+                count -= Console.WindowWidth - Column;
+                
+            }
+
             if (count == 0)
             {
                 return;
@@ -426,7 +437,7 @@ public class Terminal : IConsole
 
             terminal.Write($"{escapePrefix}{count}C");
 
-            virtualCursor.col++;
+            virtualCursor.col += count;
 
         }
 
