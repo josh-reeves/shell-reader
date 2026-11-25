@@ -8,11 +8,19 @@
             "extensions": 
             [
                 "ms-dotnettools.csdevkit",
-                "ms-dotnettools.csharp"
+                "ms-dotnettools.csharp",
+                "ms-vscode.hexeditor"
       
-            ]
+            ],
+            "settings": 
+            {
+                "csharp.debug.console": "integratedTerminal"
+
+            }
     
         }
+
     },
     "postCreateCommand": "dotnet restore"
+
 }

@@ -1,6 +1,6 @@
+using System.Collections;
 using System.Runtime.InteropServices;
 using ShellReader.Interfaces;
-using System.Collections;
 
 namespace ShellReader;
 
@@ -169,13 +169,14 @@ public class Terminal : IConsole
     private const uint ECHO = 0x00000008;
 
     private readonly TextCursor cursor;
+
     private string buffer;
 
     #endregion
 
     #region Constructor(s)
     public Terminal()
-    {        
+    {
         cursor = new TextCursor(this);
         buffer = string.Empty;
 
@@ -184,20 +185,25 @@ public class Terminal : IConsole
     #endregion
 
     #region Properties
-    public IEnumerable Buffer 
+    public IEnumerable Buffer
     {
         get => buffer;
 
         set
         {
-            buffer = value.ToString() ?? string.Empty;
+            buffer = value as string ?? buffer;
 
-            Console.Write(buffer[cursor.Index..]);
-            
+            (int row, int col) curPos = (Cursor.Row, Cursor.Column);
+
+            Cursor.SetPosition(1, 1);
+
+            Console.WriteLine(buffer);
+
+            Cursor.SetPosition(curPos.row, curPos.col);
+
         }
 
     }
-
 
     public ITextCursor Cursor { get => cursor; }
 
@@ -249,11 +255,12 @@ public class Terminal : IConsole
     private class TextCursor : ITextCursor
     {
         #region Fields
-        private const char Newline = '\n',
-                           Escape = '\u001B';
+        private const char Escape = '\u001B';
+
+        private int startingRow;
+        private string escapePrefix => $"{Escape}[";
 
         private (int row, int col) virtualCursor;
-        private string escapePrefix => $"{Escape}[";
 
         private Terminal terminal;
 
@@ -262,9 +269,10 @@ public class Terminal : IConsole
         #region Constructor(s)
         public TextCursor(IConsole parent)
         {
+            startingRow = GetAbsolutePosition().row;
             terminal = (Terminal)parent;
+
             virtualCursor = (1, 1);
-            Index = 0;
 
             IsVirtual = Console.IsInputRedirected;
             
@@ -275,11 +283,39 @@ public class Terminal : IConsole
         #region Properties
         public bool IsVirtual { get; set; }
 
-        public int Column { get => GetPosition().col; }
+        public int Column 
+        { 
+            get => virtualCursor.col;
+        
+            private set
+            {
+                virtualCursor.col = value;
 
-        public int Row { get => GetPosition().row; }
+                if (virtualCursor.col > Console.WindowWidth)
+                {
+                    virtualCursor.row += 1;
 
-        public int Index { get; private set; }
+                    virtualCursor.col -= Console.WindowWidth;
+
+                }
+                
+            }
+
+        }
+
+        public int Row 
+        { 
+            get => virtualCursor.row; 
+
+            private set => virtualCursor.row = value;
+
+        }
+
+        public int Index
+        {
+            get => ((Row - 1) * Console.WindowWidth) + Column - 1;
+        
+        }
 
         #endregion
 
@@ -318,7 +354,7 @@ public class Terminal : IConsole
 
         }
 
-        private (int row, int col) GetPositionLinux()
+        private (int row, int col) GetAbsolutePositionLibC()
         {
             TCGetAttr(STDINFILE, out Termios original);
 
@@ -368,7 +404,7 @@ public class Terminal : IConsole
             }
             catch
             {                
-                return (virtualCursor.row, virtualCursor.col);
+                return (Row, Column);
 
             }
             finally
@@ -380,30 +416,50 @@ public class Terminal : IConsole
 
         }
 
-        public (int row, int col) GetPosition()
+        private (int row, int col) GetAbsolutePosition()
         {
             if (IsVirtual)
             {
-                return (virtualCursor.row, virtualCursor.col);
+                return GetPosition();
                 
             }
 
-            if (OperatingSystem.IsLinux())
+            if (OperatingSystem.IsWindows())
             {
-                return GetPositionLinux();
-
+                return (Console.CursorTop + 1, Console.CursorLeft + 1);
+            
             }
 
-            return (Console.CursorTop + 1, Console.CursorLeft + 1);
+            return GetAbsolutePositionLibC();
+
+        }
+
+        public (int row, int col) GetPosition()
+        {
+            return (Row, Column);
 
         }
 
         public void SetPosition(int row, int col) 
         {
+            // int temp = row;
+            /*
+            row = Math.Max(row, 1);
+            col = Math.Max(col, 1);
+
+            col = Math.Min(row, Console.WindowWidth);
+            */
+
+            /* The cursor is only aware of input that is passed through its
+             *  methods. This means that output from other programs cannot be
+             *  reliably tracked. As a result, the cursor's line coordinates are
+             *  based on the current line at the point the cursor is used.*/
+            row += startingRow - 1;
+
             terminal.Write($"{escapePrefix}{row};{col}H");
 
-            virtualCursor.row = row;
-            virtualCursor.col = col;
+            Row = row - (startingRow - 1);
+            Column = col;
 
         }
 
@@ -411,7 +467,8 @@ public class Terminal : IConsole
         {
             terminal.Write($"{escapePrefix}{count}A");
         
-            virtualCursor.row--;
+
+            Row -= count;
 
         }
 
@@ -419,7 +476,8 @@ public class Terminal : IConsole
         {
             terminal.Write($"{escapePrefix}{count}B");
 
-            virtualCursor.row++;
+
+            Row += count;
             
         }
 
@@ -431,9 +489,15 @@ public class Terminal : IConsole
 
             }
 
+            if (Column - count < 1)
+            {
+                count -= count - Column - 1;
+            
+            }
+
             terminal.Write($"{escapePrefix}{count}D");
 
-            virtualCursor.col--;
+            Column -= count;
 
         }
         
@@ -445,15 +509,25 @@ public class Terminal : IConsole
 
             }
 
+            if (Column + count > Console.WindowWidth)
+            {
+                count -= Console.WindowWidth - Column;
+                
+            }
+
             terminal.Write($"{escapePrefix}{count}C");
 
-            virtualCursor.col++;
+            Column += count;
 
         }
 
         public void Advance(int count)
         {
-            count = Wrap(count);
+            while (Math.Abs(count) > Console.WindowWidth)
+            {
+                count = Wrap(count);
+
+            }
 
             if (count > 0)
             {
@@ -471,9 +545,21 @@ public class Terminal : IConsole
 
         public void SetColumn(int col) 
         {
+            if (col > Console.WindowWidth)
+            {
+                col = Console.WindowWidth;
+
+            }
+
+            if (col < 1)
+            {
+                col = 1;
+
+            }
+
             terminal.Write($"{escapePrefix}{col}G");
 
-            virtualCursor.col = col;
+            Column = col;
 
         }
 
@@ -499,10 +585,9 @@ public class Terminal : IConsole
 
             }
 
-            terminal.Buffer = (terminal.Buffer as string)?.Insert(Index, str) ?? terminal.Buffer.ToString() ?? string.Empty;
+            Column += str.Length;
 
-            virtualCursor.col += str.Length;
-            Index += str.Length;
+            terminal.Buffer = terminal.buffer.Insert(Index - str.Length, str);
 
         }
 
@@ -510,14 +595,14 @@ public class Terminal : IConsole
         {
             Console.WriteLine(str);
 
-            virtualCursor.row += 1;
-            virtualCursor.col = 1;
-        
-        }
+            /* Uses a line based approach, so calling WriteLine resets all of
+             *  the indexes: */
+            Row = 1;
+            Column = 1;
 
-        public void Reset()
-        {
-            Index = 0;
+            terminal.buffer = string.Empty;
+
+            startingRow = GetAbsolutePosition().row;
 
         }
 

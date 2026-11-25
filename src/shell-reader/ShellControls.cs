@@ -39,7 +39,7 @@ public class ShellControls : IShellControls
     #region Methods
     private string UpdateTextAtCursor(string original, string insert)
     {
-        int charIndex = cursorIndex;
+        int charIndex = cursor.Index;
         string updated = original,
                displayText = Reader.IsPassword ? Reader.Mask : insert;        
 
@@ -49,29 +49,9 @@ public class ShellControls : IShellControls
 
         }
 
-        if (!Reader.InsertMode)
-        {
-            int remaining = updated[charIndex..].Length,
-                maxLength = insert.Length < remaining ? insert.Length : remaining;
-
-            updated = updated.Remove(charIndex, maxLength);
-
-            remaining = buffer[cursorIndex..].Length;
-            maxLength = insert.Length < remaining ? insert.Length : remaining;            
-
-            buffer = buffer.Remove(cursorIndex, maxLength);
-
-        }
-
         updated = updated.Insert(charIndex, insert);
 
-        Reader.Terminal.Write(displayText + buffer[cursorIndex..]);
-
-        cursor.Advance(-buffer[cursorIndex..].Length);
-
-        buffer = buffer.Insert(cursorIndex, displayText);
-
-        cursorIndex+= displayText.Length;
+        Reader.Terminal.Write(displayText);
 
         return updated;
     
