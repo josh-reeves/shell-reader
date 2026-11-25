@@ -21,9 +21,7 @@ public class ShellReader : IShellReader
 
         Terminal = terminal ??= new Terminal();
 
-        /* Configure CaptureText to add new characters to the end of input 
-         *  string by default:*/
-        CaptureText = (original, insert) => original + insert;
+        CaptureText = UpdateTextAtCursor;
 
     }
 
@@ -54,6 +52,42 @@ public class ShellReader : IShellReader
     #endregion
 
     #region Methods
+    private string UpdateTextAtCursor(string original, string insert)
+    {
+        int charIndex = cursor.Index - Prompt.Length;
+        string updated = original,
+               displayText = insert;        
+
+        if (IsPassword)
+        {
+            displayText = Mask;
+
+            bool adjustIndex = charIndex > original.Length || 
+                               string.IsNullOrEmpty(Mask);
+
+            charIndex = adjustIndex ? original.Length : charIndex;
+
+        }
+
+        // This still needs work:
+        if (!InsertMode && cursor.Index - Prompt.Length > 0)
+        {
+            int remaining = updated[charIndex..].Length,
+                maxLength = insert.Length < remaining ? insert.Length : remaining;
+
+            cursor.DeleteCharacter();
+            updated = updated.Remove(charIndex, maxLength);
+            
+        }
+
+        updated = updated.Insert(charIndex, insert);
+
+        Terminal.Write(displayText);
+
+        return updated;
+    
+    }
+
     private Func<string, string?>? RetrieveKeyMap(IDictionary<ConsoleKeyInfo, Func<string, string?>> map, ConsoleKeyInfo keyPress)
     {
         ConsoleKeyInfo temp = new(keyPress.KeyChar, keyPress.Key, false, false, false);
@@ -191,13 +225,21 @@ public class Terminal : IConsole
 
         set
         {
+            if (value is not string str)
+            {
+                return;
+
+            }
+
+            int lengthDiff = buffer.Length - str.Length;
+            
             buffer = value as string ?? buffer;
 
             (int row, int col) curPos = (Cursor.Row, Cursor.Column);
 
             Cursor.SetPosition(1, 1);
 
-            Console.WriteLine(buffer);
+            Console.WriteLine(buffer + new string(' ', Math.Max(lengthDiff, 0)));
 
             Cursor.SetPosition(curPos.row, curPos.col);
 
@@ -467,7 +509,6 @@ public class Terminal : IConsole
         {
             terminal.Write($"{escapePrefix}{count}A");
         
-
             Row -= count;
 
         }
@@ -475,7 +516,6 @@ public class Terminal : IConsole
         public void MoveDown(int count = 1) 
         {
             terminal.Write($"{escapePrefix}{count}B");
-
 
             Row += count;
             
@@ -523,7 +563,7 @@ public class Terminal : IConsole
 
         public void Advance(int count)
         {
-            while (Math.Abs(count) > Console.WindowWidth)
+            while (count + Column > Console.WindowWidth || count + Column < 1)
             {
                 count = Wrap(count);
 
@@ -567,7 +607,12 @@ public class Terminal : IConsole
             => terminal.Write($"{escapePrefix}{count}@");
 
         public void DeleteCharacter(int count = 1)
-            => terminal.Write($"{escapePrefix}{count}P");
+        {
+            terminal.Write($"{escapePrefix}{count}P");
+            
+            terminal.Buffer = terminal.buffer.Remove(Index, count);
+
+        }
         
         public void ClearRemaining() 
             => terminal.Write($"{escapePrefix}K");
