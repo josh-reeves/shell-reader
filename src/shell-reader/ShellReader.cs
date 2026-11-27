@@ -70,7 +70,7 @@ public class ShellReader : IShellReader
         }
 
         // This still needs work:
-        if (!InsertMode && cursor.Index - Prompt.Length > 0)
+        if (!InsertMode && cursor.Index - Prompt.Length < updated.Length)
         {
             int remaining = updated[charIndex..].Length,
                 maxLength = insert.Length < remaining ? insert.Length : remaining;
@@ -239,7 +239,7 @@ public class Terminal : IConsole
 
             Cursor.SetPosition(1, 1);
 
-            Console.WriteLine(buffer + new string(' ', Math.Max(lengthDiff, 0)));
+            Console.WriteLine(buffer + new string(' ', Math.Max(lengthDiff, 0) + 1));
 
             Cursor.SetPosition(curPos.row, curPos.col);
 
@@ -376,14 +376,16 @@ public class Terminal : IConsole
         {
             int remaining = count;
             
-            if (count + Column > Console.WindowWidth)
+            while (Column + count > Console.WindowWidth)
             {
                 remaining -= Console.WindowWidth - Column + 1;
 
                 MoveDown();
                 SetColumn(1);
 
-            } else if (Column + count < 1)
+            }
+            
+            while (Column + count < 1)
             {
                 remaining = Column + count;
                 
@@ -484,13 +486,8 @@ public class Terminal : IConsole
 
         public void SetPosition(int row, int col) 
         {
-            // int temp = row;
-            /*
             row = Math.Max(row, 1);
-            col = Math.Max(col, 1);
-
-            col = Math.Min(row, Console.WindowWidth);
-            */
+            col = Math.Clamp(col, 1, Console.WindowWidth);
 
             /* The cursor is only aware of input that is passed through its
              *  methods. This means that output from other programs cannot be
@@ -563,11 +560,7 @@ public class Terminal : IConsole
 
         public void Advance(int count)
         {
-            while (count + Column > Console.WindowWidth || count + Column < 1)
-            {
-                count = Wrap(count);
-
-            }
+            count = Wrap(count);
 
             if (count > 0)
             {
@@ -614,11 +607,21 @@ public class Terminal : IConsole
 
         }
         
-        public void ClearRemaining() 
-            => terminal.Write($"{escapePrefix}K");
+        public void ClearRemaining()
+        {
+            terminal.Write($"{escapePrefix}K");
+        
+            terminal.Buffer = terminal.buffer.Remove(Index);
+        
+        } 
 
         public void ClearScreen()
-            => terminal.Write($"{escapePrefix}2J");
+        {
+            terminal.Write($"{escapePrefix}2J");
+
+            terminal.buffer = string.Empty;
+
+        }
 
         public void Write(string str)
         {
@@ -638,13 +641,20 @@ public class Terminal : IConsole
 
         public void WriteLine(string str)
         {
-            Console.WriteLine(str);
+            startingRow = GetAbsolutePosition().row;
+
+            terminal.Write(str);
+
+            SetPosition(
+                terminal.buffer.Length / Console.WindowWidth + 1,
+                terminal.buffer.Length % Console.WindowWidth + 1);
+                
+            Console.WriteLine();
 
             /* Uses a line based approach, so calling WriteLine resets all of
              *  the indexes: */
             Row = 1;
             Column = 1;
-
             terminal.buffer = string.Empty;
 
             startingRow = GetAbsolutePosition().row;

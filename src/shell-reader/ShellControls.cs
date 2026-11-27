@@ -150,13 +150,10 @@ public class ShellControls : IShellControls
 
         }
 
-        cursor.SetColumn(Reader.Prompt.Length + 1);
+        input = Home(input);
         cursor.ClearRemaining();
 
         Reader.Terminal.Write(input);
-
-        //cursorIndex = input.Length;
-        // buffer = input;
 
         return input;
 
@@ -181,12 +178,10 @@ public class ShellControls : IShellControls
             
         }
 
-        cursor.SetColumn(Reader.Prompt.Length + 1);
+        input = Home(input);
         cursor.ClearRemaining();
 
         Reader.Terminal.Write(input);
-
-        //cursorIndex = input.Length;;
 
         return input;
         
@@ -200,7 +195,6 @@ public class ShellControls : IShellControls
         if (cursorIndex > 0)
         {
             cursor.Advance(-1);
-            //cursorIndex--;
 
         }
         
@@ -216,7 +210,6 @@ public class ShellControls : IShellControls
         if (cursor.Index < buffer.Length)
         {
             cursor.Advance(1);
-            //cursorIndex++;
 
         }
 
@@ -229,7 +222,7 @@ public class ShellControls : IShellControls
 
     public string CtrlA(string input)
     {                
-        cursor.SetColumn(Reader.Prompt.Length + 1);
+        cursor.SetPosition(1, 1 + Reader.Prompt.Length);
         
         return input;
 
@@ -240,9 +233,9 @@ public class ShellControls : IShellControls
 
     public string CtrlE(string input)
     {
-        int textLength = Reader.IsPassword ? input.Length * Reader.Mask.Length : input.Length;
-
-        cursor.SetColumn(Reader.Prompt.Length + textLength + 1);
+        cursor.SetPosition(
+            buffer.Length / Console.WindowWidth + 1, 
+            buffer.Length % Console.WindowWidth + 1);
 
         return input;
 
@@ -273,11 +266,8 @@ public class ShellControls : IShellControls
 
             input = History[historyIndex];
 
-            cursor.SetColumn(Reader.Prompt.Length + 1);
+            input = Home(input);
             cursor.ClearRemaining();
-
-            //cursorIndex = input.Length;
-            // buffer = input;
 
             Reader.Terminal.Write(input);
             
@@ -295,9 +285,10 @@ public class ShellControls : IShellControls
 
             if (index >= 0)
             {
-                //cursorIndex = index;
-                cursor.SetColumn(Reader.Prompt.Length + cursorIndex + 1);
-                
+                cursor.SetPosition(
+                    index / Console.WindowWidth + 1, 
+                    index % Console.WindowWidth + Reader.Prompt.Length);
+
                 break;
 
             }
@@ -315,9 +306,10 @@ public class ShellControls : IShellControls
 
             if (index >= 0)
             {
-                //cursorIndex = index;
-                cursor.SetColumn(Reader.Prompt.Length + cursorIndex + 1);
-                
+                cursor.SetPosition(
+                    index / Console.WindowWidth + 1, 
+                    index % Console.WindowWidth + Reader.Prompt.Length);
+                                    
                 break;
 
             }
