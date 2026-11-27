@@ -5,7 +5,9 @@ namespace ShellReader.Interfaces;
 public interface IConsole
 {
     #region Properties
-    public IEnumerable Buffer { get; }
+    public int BufferWidth { get; }
+
+    public object Buffer { get; }
 
     public ITextCursor Cursor { get; }
 

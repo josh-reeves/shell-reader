@@ -42,6 +42,8 @@ public interface IShellControls
 
     public string Insert(string input);
 
+    public void RegisterAllWithDefaults(IShellReader? reader = null);
+
     #endregion
     
 }

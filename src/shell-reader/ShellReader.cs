@@ -69,11 +69,11 @@ public class ShellReader : IShellReader
 
         }
 
-        // This still needs work:
         if (!InsertMode && cursor.Index - Prompt.Length < updated.Length)
         {
-            int remaining = updated[charIndex..].Length,
-                maxLength = insert.Length < remaining ? insert.Length : remaining;
+            int maxLength = Math.Min(
+                insert.Length, 
+                updated[charIndex..].Length);
 
             cursor.DeleteCharacter();
             updated = updated.Remove(charIndex, maxLength);
@@ -197,6 +197,7 @@ public class ShellReader : IShellReader
 public class Terminal : IConsole
 {
     #region Fields
+    private const int DEFAULTBUFFERWIDTH = 80;
     private const int STDINFILE = 0;
     private const int TCSANOW = 0;
     private const uint ICANON = 0x00000002;
@@ -214,12 +215,16 @@ public class Terminal : IConsole
         cursor = new TextCursor(this);
         buffer = string.Empty;
 
+        BufferWidth = Console.WindowWidth;
+
     }
 
     #endregion
 
     #region Properties
-    public IEnumerable Buffer
+    public int BufferWidth { get; private set; }
+
+    public object Buffer
     {
         get => buffer;
 
@@ -233,15 +238,15 @@ public class Terminal : IConsole
 
             int lengthDiff = buffer.Length - str.Length;
             
-            buffer = value as string ?? buffer;
+            buffer = str;
 
-            (int row, int col) curPos = (Cursor.Row, Cursor.Column);
+            (int row, int col) = (Cursor.Row, Cursor.Column);
 
             Cursor.SetPosition(1, 1);
 
             Console.WriteLine(buffer + new string(' ', Math.Max(lengthDiff, 0) + 1));
 
-            Cursor.SetPosition(curPos.row, curPos.col);
+            Cursor.SetPosition(row, col);
 
         }
 
@@ -260,6 +265,9 @@ public class Terminal : IConsole
 
     [DllImport("libc", EntryPoint = "read")]
     private static extern IntPtr Read(int fd, out byte buf, UIntPtr count);
+
+    private void RefreshBuffer()
+        => Buffer = buffer;
 
     public virtual ConsoleKeyInfo ReadKey(bool intercept = false) 
         => Console.ReadKey(intercept);
@@ -299,6 +307,7 @@ public class Terminal : IConsole
         #region Fields
         private const char Escape = '\u001B';
 
+        private bool isVirtual;
         private int startingRow;
         private string escapePrefix => $"{Escape}[";
 
@@ -323,7 +332,18 @@ public class Terminal : IConsole
         #endregion
 
         #region Properties
-        public bool IsVirtual { get; set; }
+        public bool IsVirtual
+        {
+            get => isVirtual;
+
+            set
+            {
+                isVirtual = value;
+                terminal.BufferWidth = DEFAULTBUFFERWIDTH;
+
+            }
+
+        }
 
         public int Column 
         { 
@@ -333,11 +353,11 @@ public class Terminal : IConsole
             {
                 virtualCursor.col = value;
 
-                if (virtualCursor.col > Console.WindowWidth)
+                if (virtualCursor.col > terminal.BufferWidth)
                 {
                     virtualCursor.row += 1;
 
-                    virtualCursor.col -= Console.WindowWidth;
+                    virtualCursor.col -= terminal.BufferWidth;
 
                 }
                 
@@ -355,7 +375,7 @@ public class Terminal : IConsole
 
         public int Index
         {
-            get => ((Row - 1) * Console.WindowWidth) + Column - 1;
+            get => ((Row - 1) * terminal.BufferWidth) + Column - 1;
         
         }
 
@@ -376,21 +396,20 @@ public class Terminal : IConsole
         {
             int remaining = count;
             
-            while (Column + count > Console.WindowWidth)
+            if (count + Column > terminal.BufferWidth)
             {
-                remaining -= Console.WindowWidth - Column + 1;
+                remaining -= terminal.BufferWidth - Column + 1;
 
                 MoveDown();
                 SetColumn(1);
 
-            }
-            
-            while (Column + count < 1)
+            } 
+            else if (Column + count < 1)
             {
                 remaining = Column + count;
                 
                 MoveUp();
-                SetColumn(Console.WindowWidth);
+                SetColumn(terminal.BufferWidth);
 
             }
 
@@ -486,13 +505,16 @@ public class Terminal : IConsole
 
         public void SetPosition(int row, int col) 
         {
+            /* What do we do when staring row becomes negative? That's probably
+             *  at least a part of the cursor placement issues when the buffer
+             *  grows beyond the screen.*/
             row = Math.Max(row, 1);
-            col = Math.Clamp(col, 1, Console.WindowWidth);
+            col = Math.Clamp(col, 1, terminal.BufferWidth);
 
             /* The cursor is only aware of input that is passed through its
              *  methods. This means that output from other programs cannot be
              *  reliably tracked. As a result, the cursor's line coordinates are
-             *  based on the current line at the point the cursor is used.*/
+             *  based on the current line at the point the cursor is used:*/
             row += startingRow - 1;
 
             terminal.Write($"{escapePrefix}{row};{col}H");
@@ -546,9 +568,9 @@ public class Terminal : IConsole
 
             }
 
-            if (Column + count > Console.WindowWidth)
+            if (Column + count > terminal.BufferWidth)
             {
-                count -= Console.WindowWidth - Column;
+                count -= terminal.BufferWidth - Column;
                 
             }
 
@@ -560,7 +582,11 @@ public class Terminal : IConsole
 
         public void Advance(int count)
         {
-            count = Wrap(count);
+            while (count + Column > terminal.BufferWidth || count + Column < 1)
+            {
+                count = Wrap(count);
+
+            }
 
             if (count > 0)
             {
@@ -578,9 +604,9 @@ public class Terminal : IConsole
 
         public void SetColumn(int col) 
         {
-            if (col > Console.WindowWidth)
+            if (col > terminal.BufferWidth)
             {
-                col = Console.WindowWidth;
+                col = terminal.BufferWidth;
 
             }
 
@@ -637,6 +663,16 @@ public class Terminal : IConsole
 
             terminal.Buffer = terminal.buffer.Insert(Index - str.Length, str);
 
+            int endingRow = startingRow + 
+                (terminal.buffer.Length / terminal.BufferWidth);
+
+            if (endingRow >= Console.WindowHeight)
+            {
+                startingRow--;
+                terminal.RefreshBuffer();
+
+            }
+
         }
 
         public void WriteLine(string str)
@@ -646,8 +682,8 @@ public class Terminal : IConsole
             terminal.Write(str);
 
             SetPosition(
-                terminal.buffer.Length / Console.WindowWidth + 1,
-                terminal.buffer.Length % Console.WindowWidth + 1);
+                terminal.buffer.Length / terminal.BufferWidth + 1,
+                terminal.buffer.Length % terminal.BufferWidth + 1);
                 
             Console.WriteLine();
 

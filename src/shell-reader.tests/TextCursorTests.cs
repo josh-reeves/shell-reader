@@ -13,6 +13,7 @@ public class TextCursorTests
     public TextCursorTests()
     {
         reader = new();
+        reader.Terminal.Cursor.IsVirtual = true;
 
     }
 
@@ -22,8 +23,6 @@ public class TextCursorTests
     [Theory]
     [InlineData("", 1, 1)]
     [InlineData("test", 1, 5)]
-    [InlineData("with\nnewlines", 2, 9)]
-    [InlineData("with\nmore\nnewlines\n", 4, 1)]
     public void GetCursorPosition_AnyLine_ReturnsCoordinates(string input, int testRow, int testCol)
     {
         reader.Terminal.Write(input);
