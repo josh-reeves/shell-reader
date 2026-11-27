@@ -17,7 +17,9 @@ public interface IShellReader
 
     public Func<string, string, string> CaptureText { get; set; }
 
-    public IDictionary<ConsoleKeyInfo, Func<string, string?>> KeyMap { get; }
+    public string[] Separators { get; set; }
+
+    public IDictionary<ConsoleKeyInfo, Func<string, string?>> KeyMap { get; set; }
     
     #endregion
 

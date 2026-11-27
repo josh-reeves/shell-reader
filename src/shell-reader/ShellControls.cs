@@ -5,10 +5,10 @@ namespace ShellReader;
 public class ShellControls : IShellControls
 {
     #region Fields
-    private int cursorIndex;
     private int historyIndex;
-    private string buffer;
     
+    private int cursorIndex => cursor.Index - Reader.Prompt.Length;
+    private string buffer => Reader.Terminal.Buffer as string ?? string.Empty; 
     private ITextCursor cursor => Reader.Terminal.Cursor;
 
     #endregion
@@ -16,12 +16,9 @@ public class ShellControls : IShellControls
     #region Constructor(s)
     public ShellControls(IShellReader reader)
     {
-        cursorIndex = 0;
         historyIndex = 0;
-        buffer = string.Empty;
 
         Reader = reader;
-        Reader.CaptureText = UpdateTextAtCursor;
 
         History = [string.Empty];        
     
@@ -37,7 +34,7 @@ public class ShellControls : IShellControls
     #endregion
 
     #region Methods
-    public string? Enter(string? input)
+    public virtual string? Enter(string? input)
     {
         if (!string.IsNullOrWhiteSpace(input) && !Reader.IsPassword)
         {
@@ -46,9 +43,7 @@ public class ShellControls : IShellControls
 
         }
 
-        cursorIndex = 0;
         historyIndex = History.Count - 1;
-        buffer = string.Empty;
 
         Reader.IsReading = false;
         
@@ -56,26 +51,25 @@ public class ShellControls : IShellControls
 
     }
 
-    public string? CtrlC(string input)
-        => Enter(null);
-    
-    public string? CtrlJ(string input)
+    public virtual string? CtrlJ(string input)
         => Enter(input);
 
-    public string Backspace(string input)
+    public virtual string? CtrlC(string input)
+        => Enter(null);
+    
+    public virtual string? CtrlZ(string input)
+        => CtrlC(input);
+
+    public virtual string Backspace(string input)
     {
-        if (buffer.Length > 0)
+        if (cursorIndex > 0)
         {
-            cursor.MoveLeft();
+            cursor.Advance(-1);
             cursor.DeleteCharacter();
-
-            cursorIndex--;
-
-            buffer = buffer.Remove(cursorIndex, 1);
 
         }
 
-        if (string.IsNullOrEmpty(input))
+        if (string.IsNullOrEmpty(input) || cursorIndex <= 0)
         {
             return input;
 
@@ -99,15 +93,14 @@ public class ShellControls : IShellControls
 
     }
 
-    public string CtrlH(string input)
+    public virtual string CtrlH(string input)
         => Backspace(input);
 
-    public string CtrlD(string input)
+    public virtual string CtrlD(string input)
     {
-        if (buffer.Length > 0)
+        if (cursorIndex >= 0 && cursorIndex < input.Length)
         {
-            Reader.Terminal.Cursor.DeleteCharacter();
-            buffer = buffer.Remove(cursorIndex, 1);
+            cursor.DeleteCharacter();
 
         }
 
@@ -127,10 +120,10 @@ public class ShellControls : IShellControls
 
     }
 
-    public string Del(string input)
+    public virtual string Del(string input)
         => CtrlD(input);
 
-    public string CtrlL(string input)
+    public virtual string CtrlL(string input)
     {
         cursor.ClearScreen();
         cursor.SetPosition(1, 1);
@@ -141,7 +134,7 @@ public class ShellControls : IShellControls
 
     }
 
-    public string CtrlP(string input)
+    public virtual string CtrlP(string input)
     {
         if (Reader.IsPassword)
         {
@@ -157,22 +150,19 @@ public class ShellControls : IShellControls
 
         }
 
-        cursor.SetColumn(Reader.Prompt.Length + 1);
+        input = Home(input);
         cursor.ClearRemaining();
 
         Reader.Terminal.Write(input);
-
-        cursorIndex = input.Length;
-        buffer = input;
 
         return input;
 
     }
 
-    public string UpArrow(string input)
+    public virtual string UpArrow(string input)
         => CtrlP(input);
 
-    public string CtrlN(string input)
+    public virtual string CtrlN(string input)
     {
         if (Reader.IsPassword)
         {
@@ -188,27 +178,23 @@ public class ShellControls : IShellControls
             
         }
 
-        cursor.SetColumn(Reader.Prompt.Length + 1);
+        input = Home(input);
         cursor.ClearRemaining();
 
         Reader.Terminal.Write(input);
 
-        cursorIndex = input.Length;
-        buffer = input;
-
         return input;
         
     }
 
-    public string DownArrow(string input)
+    public virtual string DownArrow(string input)
         => CtrlN(input);
 
-    public string CtrlB(string input)
+    public virtual string CtrlB(string input)
     {
         if (cursorIndex > 0)
         {
-            cursor.MoveLeft();
-            cursorIndex--;
+            cursor.Advance(-1);
 
         }
         
@@ -216,15 +202,14 @@ public class ShellControls : IShellControls
         
     }
 
-    public string LeftArrow(string input)
+    public virtual string LeftArrow(string input)
         => CtrlB(input);
 
-    public string CtrlF(string input)
+    public virtual string CtrlF(string input)
     {
-        if (cursorIndex < buffer.Length)
+        if (cursor.Index < buffer.Length)
         {
-            Reader.Terminal.Cursor.MoveRight();
-            cursorIndex++;
+            cursor.Advance(1);
 
         }
 
@@ -232,79 +217,151 @@ public class ShellControls : IShellControls
         
     }
 
-    public string RightArrow(string input)
+    public virtual string RightArrow(string input)
         => CtrlF(input);
 
-    public string CtrlA(string input)
+    public virtual string CtrlA(string input)
     {                
-        Reader.Terminal.Cursor.SetColumn(Reader.Prompt.Length + 1);
+        cursor.SetPosition(1, 1 + Reader.Prompt.Length);
         
         return input;
 
     }
 
-    public string Home(string input)
+    public virtual string Home(string input)
         => CtrlA(input);
 
-    public string CtrlE(string input)
+    public virtual string CtrlE(string input)
     {
-        int textLength = Reader.IsPassword ? input.Length * Reader.Mask.Length : input.Length;
-
-        Reader.Terminal.Cursor.SetColumn(Reader.Prompt.Length + textLength + 1);
+        cursor.SetPosition(
+            buffer.Length / Console.WindowWidth + 1, 
+            buffer.Length % Console.WindowWidth + 1);
 
         return input;
 
     }
 
-    public string End(string input)
+    public virtual string End(string input)
         => CtrlE(input);
 
-    public string UpdateTextAtCursor(string original, string insert)
-    {
-        int charIndex = cursorIndex;
-        string updated = original,
-               displayText = Reader.IsPassword ? Reader.Mask : insert;        
-
-        if (charIndex > original.Length || (Reader.IsPassword && string.IsNullOrEmpty(Reader.Mask)))
-        {
-            charIndex = original.Length;
-
-        }
-
-        if (!Reader.InsertMode)
-        {
-            int remaining = updated[charIndex..].Length,
-                maxLength = insert.Length < remaining ? insert.Length : remaining;
-
-            updated = updated.Remove(charIndex, maxLength);
-
-            remaining = buffer[cursorIndex..].Length;
-            maxLength = insert.Length < remaining ? insert.Length : remaining;            
-
-            buffer = buffer.Remove(cursorIndex, maxLength);
-
-        }
-
-        updated = updated.Insert(charIndex, insert);
-
-        Reader.Terminal.Write(displayText + buffer[cursorIndex..]);
-
-        cursor.MoveLeft(buffer[cursorIndex..].Length);
-
-        buffer = buffer.Insert(cursorIndex, displayText);
-
-        cursorIndex+= displayText.Length;
-
-        return updated;
-    
-    }
-
-    public string Insert(string input)
+    public virtual string Insert(string input)
     {
         Reader.InsertMode = !Reader.InsertMode;
 
         return input;
 
+    }
+
+    public virtual string F3(string input)
+    {
+        if (Reader.IsPassword)
+        {
+            return input;
+
+        }
+
+        if (historyIndex > 0)
+        {
+            historyIndex--;
+
+            input = History[historyIndex];
+
+            input = Home(input);
+            cursor.ClearRemaining();
+
+            Reader.Terminal.Write(input);
+            
+        }
+
+        return input;
+
+    }
+
+    public virtual string AltF(string input)
+    {
+        if (Reader.IsPassword)
+        {
+            return input;
+
+        }
+
+        foreach (string sep in Reader.Separators)
+        {
+            int index = buffer.IndexOf(sep, cursor.Index);
+
+            if (index >= 0)
+            {
+                cursor.SetPosition(
+                    index / Console.WindowWidth + 1, 
+                    index % Console.WindowWidth + Reader.Prompt.Length);
+
+                break;
+
+            }
+
+        }
+        
+        return input;
+        
+    }
+
+    public string AltB(string input)
+    {
+        if (Reader.IsPassword)
+        {
+            return input;
+
+        }
+
+        foreach (string sep in Reader.Separators)
+        {
+            int index = buffer.LastIndexOf(sep, cursor.Index - 1);
+
+            if (index >= 0)
+            {
+                cursor.SetPosition(
+                    index / Console.WindowWidth + 1, 
+                    index % Console.WindowWidth + Reader.Prompt.Length);
+                                    
+                break;
+
+            }
+
+        }
+        
+        return input;
+        
+    }
+
+    public void RegisterAllWithDefaults(IShellReader? reader = null)
+    {
+        reader ??= Reader;
+
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.Enter, false, false, false), Enter);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.Backspace, false, false, false), Backspace);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.UpArrow, false, false, false), UpArrow);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.DownArrow, false, false, false), DownArrow);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.LeftArrow, false, false, false), LeftArrow);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.RightArrow, false, false, false), RightArrow);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.Home, false, false, false), Home);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.A, false, false, true), CtrlA);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.End, false, false, false), End);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.C, false, false, true), CtrlC);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.D, false, false, true), CtrlD);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.Delete, false, false, false), Del);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.F, false, false, true), CtrlF);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.H, false, false, true), CtrlH);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.J, false, false, true), CtrlJ);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.L, false, false, true), CtrlL);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.N, false, false, true), CtrlN);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.P, false, false, true), CtrlP);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.B, false, false, true), CtrlB);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.Z, false, false, true), CtrlZ);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.Insert, false, false, false), Insert);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.F3, false, false, false), F3);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.F, false, true, false), AltF);
+        reader.KeyMap.Add(new ConsoleKeyInfo('\0', ConsoleKey.B, false, true, false), AltB);
+        
     }
 
     #endregion

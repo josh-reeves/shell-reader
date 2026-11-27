@@ -1,8 +1,14 @@
+using System.Collections;
+
 namespace ShellReader.Interfaces;
 
 public interface IConsole
 {
     #region Properties
+    public int BufferWidth { get; }
+
+    public object Buffer { get; }
+
     public ITextCursor Cursor { get; }
 
     #endregion
