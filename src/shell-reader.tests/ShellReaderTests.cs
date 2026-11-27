@@ -39,7 +39,7 @@ public class ShellReaderTests
             
             string compare = reader.Read(prompt: prompt) ?? string.Empty;
 
-            if (compare != test || virtualConsole.SavedBuffer != prompt + test)
+            if (compare != test || virtualConsole.TestBuffer != prompt + test)
             {
                 Assert.Fail();
 
